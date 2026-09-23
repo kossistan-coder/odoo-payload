@@ -451,7 +451,12 @@ export function navGroups() {
         }
         groups.get(label).push(entity);
     };
-    for (const c of [...store.config.collections, USERS_COLLECTION]) {
+    // Pages, Posts, Media, Users, then the other collections (by sequence)
+    const ordered = [...store.config.collections, { ...USERS_COLLECTION, sequence: 35 }]
+        .map((c, index) => ({ c, index }))
+        .sort((a, b) => (a.c.sequence ?? 100) - (b.c.sequence ?? 100) || a.index - b.index)
+        .map(({ c }) => c);
+    for (const c of ordered) {
         if (c.admin?.hidden) {
             continue;
         }

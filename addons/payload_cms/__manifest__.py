@@ -33,6 +33,7 @@ A headless CMS reproducing Payload CMS (https://payloadcms.com):
         'views/admin_templates.xml',
         'data/cms_data.xml',
         'data/form_builder_data.xml',
+        'data/navigation_data.xml',
     ],
     'assets': {
         # Client action embedding the Payload admin inside the Odoo web client
@@ -56,5 +57,5 @@ A headless CMS reproducing Payload CMS (https://payloadcms.com):
         ],
     },
     'installable': True,
-    'application': True,
+    'application': False,
 }

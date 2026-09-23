@@ -107,6 +107,7 @@ def collection_doc(collection):
         for s in (collection.image_sizes or [])
     ]
     doc['fields'] = field_rows(collection.field_ids)
+    doc['codeModule'] = collection.code_module or ''
     doc['documentCount'] = collection.document_count
     doc['fieldCount'] = collection.field_count
     doc['updatedAt'] = _iso(collection.write_date)
@@ -242,6 +243,9 @@ def save_collection(env, collection, data, kind):
     """Create (collection empty) or update a collection / global from an admin doc."""
     Collection = env['cms.collection'].sudo()
     vals = collection_vals(data, kind)
+    if collection and collection.code_module:
+        # fields defined by a Python class (payload_cms.payload): the code is the source of truth
+        data = {k: v for k, v in data.items() if k != 'fields'}
     old_fields = collection.field_ids._admin_config() if collection else None
     if collection:
         collection.write(vals)

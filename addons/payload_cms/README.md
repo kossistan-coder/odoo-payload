@@ -39,7 +39,7 @@ payload_cms/
 ├── tools/
 │   ├── schema.py         # défauts, validation, slugify, population des relations
 │   ├── query.py          # where / sort Payload → SQL JSONB
-│   └── default_schema.py # collections par défaut (Pages, Posts, Media, Categories, Header, Footer)
+│   └── default_schema.py # collections par défaut (Pages, Posts, Media + Users, globals Header, Footer)
 ├── views/                # configuration côté Odoo, menus, templates QWeb des pages
 └── static/
     ├── admin_src/        # build CSS : SCSS Payload (vendored) + Tailwind CSS v4
@@ -266,31 +266,78 @@ const { data } = useLivePreview({ initialData, serverURL: 'http://localhost:8069
 
 Dans ce cas, ajoutez l'origine du frontend (par ex. `http://localhost:3000`) à `payload_cms.cors`.
 
-## Définir un schéma en code
+## Définir des collections en code (comme un modèle Odoo)
+
+`payload_cms` est une brique livrable : il n'a pas de menu. Un module qui en dépend déclare ses collections comme des modèles Odoo, et ajoute ses propres menus avec les actions `payload_cms.action_payload_*`. Voir `palais_lome` pour un exemple complet.
 
 ```python
-env['cms.collection']._sync_schema([{
-    'slug': 'events',
-    'labels': {'singular': 'Event', 'plural': 'Events'},
-    'admin': {'useAsTitle': 'title', 'defaultColumns': ['title', 'date', '_status'], 'livePreview': {'url': ''}},
-    'versions': {'drafts': {'autosave': True}},
-    'fields': [
-        {'name': 'title', 'type': 'text', 'required': True},
-        {'name': 'date', 'type': 'date', 'admin': {'position': 'sidebar'}},
-        {'name': 'cover', 'type': 'upload', 'relationTo': 'media'},
-        {'name': 'body', 'type': 'richText'},
-        {'name': 'slug', 'type': 'slug', 'useAsSlug': 'title', 'localized': True},
-        {'name': 'kind', 'type': 'radio', 'options': ['online', 'onsite'], 'defaultValue': 'online'},
-        # affiché seulement si kind == 'onsite' (équivalent déclaratif d'admin.condition)
-        {'name': 'address', 'type': 'text', 'admin': {'condition': {'field': 'kind', 'equals': 'onsite'}}},
-    ],
-}])
+# mon_module/models/atelier.py   (importé dans models/__init__.py)
+from odoo.addons.payload_cms.payload import Collection, Global, fields
+
+class Atelier(Collection):
+    _name = 'ateliers'                 # slug : /api/ateliers, /admin/collections/ateliers
+    _label = 'Atelier'                 # singulier (_label_plural : pluriel)
+    _description = "Ateliers et expositions"
+    _rec_name = 'title'                # titre dans l'admin (useAsTitle)
+    _order = '-date_begin'             # tri par défaut
+    _columns = ['title', 'date_begin', '_status']
+    _drafts = True                     # brouillon / publié + versions
+    _autosave = True
+
+    title = fields.Char("Titre", required=True, translate=True, tab="Contenu")
+    description = fields.RichTextEditor("Description", translate=True, tab="Contenu")   # éditeur Lexical
+    date_begin = fields.Datetime("Début", required=True, tab="Dates", row="dates")
+    date_end = fields.Datetime("Fin", tab="Dates", row="dates")              # même row : côte à côte
+    event_type = fields.Selection([('atelier', 'Atelier'), ('exposition', 'Exposition')], "Type",
+                                  default='atelier', sidebar=True)
+    cover = fields.Image("Couverture", tab="Médias")                          # upload -> media
+    related = fields.Many2many('posts', "Articles liés", sidebar=True)
+    parent = fields.Many2one('ateliers', "Programme parent", sidebar=True)
+    venue = fields.Group("Lieu", fields={'city': fields.Char("Ville", default="Lomé")})
+    credits = fields.Array("Crédits", row_label='name', fields={
+        'role': fields.Char("Rôle", translate=True, row="c"),
+        'name': fields.Char("Nom", row="c"),
+    })
+    slug = fields.Slug(source='title')
+
+class Settings(Global):
+    _name = 'settings'
+    _label = "Réglages du site"
+    phone = fields.Char("Téléphone")
 ```
 
-Placez cet appel dans un module Odoo qui dépend de `payload_cms` : un fichier `data/*.xml` qui contient `<function model="cms.collection" name="_sync_schema">` avec la liste en `<value eval="…"/>`, ou un `post_init_hook`.
+**Types de champs** :
 
-- `_sync_schema` recrée les champs de la collection, mais les documents sont conservés.
-- Hooks serveur (équivalents de `beforeChange` / `afterChange`) : héritez de `cms.document` et surchargez `_payload_create` / `_payload_update` pour votre slug. Voir l'exemple dans `models/cms_form_builder.py`.
+| Odoo-like | Champ Payload |
+|---|---|
+| `Char`, `Text`, `Email` | text, textarea, email |
+| `RichTextEditor` (alias `Html`) | richText (Lexical ; HTML dans l'API) |
+| `Integer`, `Float` | number |
+| `Boolean` | checkbox |
+| `Date`, `Datetime` | date |
+| `Selection` (`multiple=True`, `widget='radio'`), `Radio` | select / radio |
+| `Slug` | slug |
+| `Many2one`, `Many2many` | relationship |
+| `Image` / `File` | upload |
+| `Group`, `Array` (alias `One2many`) | group, array |
+| `Blocks` + `Block` | blocks |
+| `Json`, `Code`, `Point` | json, code, point |
+
+**Paramètres** :
+- valeur et validation : `string` (1er argument, comme Odoo), `required`, `default`, `help`, `translate=True` (une valeur par langue), `readonly`, `unique`, `placeholder`, `private`, `min`, `max` ;
+- affichage conditionnel : `condition={'field': 'kind', 'equals': 'expo'}` ;
+- mise en page : `tab="…"` (onglet), `row="…"` (côte à côte), `width="50%"`, `sidebar=True`, `hidden=True`.
+
+**Options de collection** :
+- `_group` : groupe de navigation. Par défaut « Collections », à la suite de Pages, Posts, Media et Users.
+- `_sequence` : position dans la navigation.
+- `_upload` : collection de fichiers.
+- `_public_read` et `_public_create` : accès anonyme en lecture et en création.
+- `_multi_tenant` : collection par site (multisite).
+- `_live_preview_url` et `_preview_url` : aperçus.
+- `_hidden` : collection masquée dans la navigation.
+
+**Synchronisation** : les classes des modules installés sont appliquées automatiquement à l'installation, à la mise à jour et au démarrage d'Odoo, uniquement si leur définition a changé (empreinte stockée dans `cms.collection.code_hash`). Le code fait foi : dans Configuration → Collections, les champs d'une collection définie en code sont en lecture seule (« Defined in module »).
 
 ## Crédits
 

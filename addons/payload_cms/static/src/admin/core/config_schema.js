@@ -240,6 +240,7 @@ function collectionFields(kind, collections) {
         { type: "tabs", tabs },
         txt("slug", "Slug", { required: true, admin: { position: "sidebar", description: kind === "global" ? "API: /api/globals/{slug}" : "API: /api/{slug}", placeholder: "e.g. posts" } }),
         num("fieldCount", "Fields", { admin: { position: "sidebar", readOnly: true } }),
+        txt("codeModule", "Defined in module", { admin: { position: "sidebar", readOnly: true, condition: { field: "codeModule", exists: true }, description: "The fields are defined in the Python class of this module (payload_cms.payload): changes made here to the fields are ignored." } }),
         kind === "collection" && num("documentCount", "Documents", { admin: { position: "sidebar", readOnly: true } }),
     ].filter(Boolean);
 }

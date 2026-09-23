@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!--
+        payload_cms is a building block: it defines no menu of its own.
+        The modules that depend on it add the menus they need, using these actions
+        (see palais_lome/views/menus.xml).
+    -->
 
     <!-- Payload admin embedded in the Odoo web client (navbar / apps menu stay visible) -->
     <record id="action_payload_admin" model="ir.actions.client">
@@ -7,7 +12,7 @@
         <field name="tag">payload_cms.admin</field>
     </record>
 
-    <!-- Configuration pages rendered with the Payload UI (schema builder) -->
+    <!-- Configuration pages rendered with the Payload UI -->
     <record id="action_payload_config_collections" model="ir.actions.client">
         <field name="name">Collections</field>
         <field name="tag">payload_cms.admin</field>
@@ -23,41 +28,19 @@
         <field name="tag">payload_cms.admin</field>
         <field name="params" eval="{'path': '/config/fields'}"/>
     </record>
-
-    <menuitem id="menu_payload_cms_root"
-              name="CMS"
-              sequence="15"
-              web_icon="payload_cms,static/description/icon.png"
-              groups="group_payload_cms_user"/>
-
-    <menuitem id="menu_payload_cms_admin_panel"
-              name="Admin Panel"
-              parent="menu_payload_cms_root"
-              action="action_payload_admin"
-              sequence="1"/>
-
-    <menuitem id="menu_payload_cms_config"
-              name="Configuration"
-              parent="menu_payload_cms_root"
-              sequence="20"
-              groups="group_payload_cms_admin"/>
-
-    <menuitem id="menu_payload_cms_collections"
-              name="Collections"
-              parent="menu_payload_cms_config"
-              action="action_payload_config_collections"
-              sequence="10"/>
-
-    <menuitem id="menu_payload_cms_globals"
-              name="Globals"
-              parent="menu_payload_cms_config"
-              action="action_payload_config_globals"
-              sequence="20"/>
-
-    <menuitem id="menu_payload_cms_fields"
-              name="Fields"
-              parent="menu_payload_cms_config"
-              action="action_payload_config_fields"
-              sequence="30"/>
-
+    <record id="action_payload_config_localization" model="ir.actions.client">
+        <field name="name">Localization</field>
+        <field name="tag">payload_cms.admin</field>
+        <field name="params" eval="{'path': '/config/localization'}"/>
+    </record>
+    <record id="action_payload_config_multitenancy" model="ir.actions.client">
+        <field name="name">Multisite</field>
+        <field name="tag">payload_cms.admin</field>
+        <field name="params" eval="{'path': '/config/multitenancy'}"/>
+    </record>
+    <record id="action_payload_config_api_docs" model="ir.actions.client">
+        <field name="name">API Docs</field>
+        <field name="tag">payload_cms.admin</field>
+        <field name="params" eval="{'path': '/api-docs'}"/>
+    </record>
 </odoo>

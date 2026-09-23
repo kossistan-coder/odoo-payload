@@ -34,16 +34,6 @@ DEFAULT_SCHEMA = [
         ],
     },
     {
-        'slug': 'categories',
-        'sequence': 40,
-        'labels': {'singular': 'Category', 'plural': 'Categories'},
-        'admin': {'useAsTitle': 'title', 'defaultColumns': ['title', 'slug', 'updatedAt']},
-        'fields': [
-            {'name': 'title', 'type': 'text', 'required': True},
-            {'name': 'slug', 'type': 'slug', 'useAsSlug': 'title', 'admin': {'position': 'sidebar'}},
-        ],
-    },
-    {
         'slug': 'pages',
         'sequence': 10,
         'labels': {'singular': 'Page', 'plural': 'Pages'},
@@ -82,7 +72,6 @@ DEFAULT_SCHEMA = [
                         ]},
                         {'slug': 'archive', 'labels': {'singular': 'Archive'}, 'fields': [
                             {'name': 'introContent', 'type': 'richText', 'label': 'Intro Content'},
-                            {'name': 'categories', 'type': 'relationship', 'relationTo': 'categories', 'hasMany': True},
                             {'name': 'limit', 'type': 'number', 'defaultValue': 10},
                         ]},
                     ]},
@@ -116,8 +105,6 @@ DEFAULT_SCHEMA = [
                 ]},
                 {'label': 'Meta', 'fields': [
                     {'name': 'relatedPosts', 'type': 'relationship', 'relationTo': 'posts', 'hasMany': True,
-                     'admin': {'position': 'sidebar'}},
-                    {'name': 'categories', 'type': 'relationship', 'relationTo': 'categories', 'hasMany': True,
                      'admin': {'position': 'sidebar'}},
                 ]},
                 {'name': 'meta', 'label': 'SEO', 'fields': [

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Navigation order: Pages, Posts, Media, Users, then the other collections -->
+    <function model="cms.collection" name="_payload_default_sequences"/>
+</odoo>

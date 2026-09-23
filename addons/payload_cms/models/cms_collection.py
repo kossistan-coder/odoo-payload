@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
+import logging
 import re
 
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
 
 from ..tools import multitenancy, schema
+
+_logger = logging.getLogger(__name__)
 
 SLUG_RE = re.compile(r'^[a-z0-9][a-z0-9_-]*$')
 
@@ -34,7 +37,10 @@ class CmsCollection(models.Model):
     _order = 'kind, sequence, id'
     _rec_name = 'label'
 
-    sequence = fields.Integer(default=10)
+    sequence = fields.Integer(default=100, help="Order in the navigation (default collections: 10-30, Users: 35).")
+    # code-first collections (payload_cms.payload.Collection classes)
+    code_module = fields.Char(readonly=True, help="Module whose Python class defines this collection.")
+    code_hash = fields.Char(readonly=True, copy=False)
     kind = fields.Selection(
         [('collection', 'Collection'), ('global', 'Global')],
         required=True, default='collection', tracking=True)
@@ -184,6 +190,8 @@ class CmsCollection(models.Model):
             'label': self.label,
             'fields': self._payload_fields(),
             'multiTenant': self._is_tenant_scoped(),
+            'sequence': self.sequence,
+            'codeModule': self.code_module or False,
             'admin': {
                 'useAsTitle': self._title_field(),
                 'defaultColumns': [c.strip() for c in (self.default_columns or '').split(',') if c.strip()],
@@ -266,7 +274,7 @@ class CmsCollection(models.Model):
                 'public_read': spec.get('publicRead', True),
                 'public_create': bool(spec.get('publicCreate')),
                 'multi_tenant': bool(spec.get('multiTenant')),
-                'sequence': spec.get('sequence', 10),
+                'sequence': spec.get('sequence', 100),
             }
             if isinstance(upload, dict):
                 if upload.get('mimeTypes'):
@@ -328,6 +336,58 @@ class CmsCollection(models.Model):
             else:
                 collection.all_field_ids.filtered('localized').write({'localized': False})
                 collection._migrate_localized(old_fields)
+
+    # ------------------------------------------------------------------
+    # Code-first collections (odoo.addons.payload_cms.payload.Collection)
+    # ------------------------------------------------------------------
+    def _register_hook(self):
+        super()._register_hook()
+        try:
+            with self.env.cr.savepoint():
+                self._payload_sync_code()
+        except Exception:  # noqa: BLE001 - never prevent the server from starting
+            _logger.exception("Payload CMS: cannot synchronise the code-first collections")
+
+    @api.model
+    def _payload_sync_code(self, force=False):
+        """Create / update the collections declared as Python classes by the
+        installed modules (only when their definition changed)."""
+        from ..payload import registered
+        classes = registered()
+        if not classes:
+            return
+        modules = {cls._module for cls in classes}
+        installed = set(self.env['ir.module.module'].sudo().search(
+            [('name', 'in', list(modules)), ('state', 'in', ('installed', 'to upgrade', 'to install'))]).mapped('name'))
+        classes = sorted((c for c in classes if c._module in installed), key=lambda c: (c._kind, c._sequence, c._name))
+        Collection = self.sudo().with_context(active_test=False)
+        # 1. create the missing collections first (relations between them)
+        for cls in classes:
+            if not Collection.search([('slug', '=', cls._name), ('kind', '=', cls._kind)], limit=1):
+                spec = dict(cls._spec(), fields=[])
+                Collection._sync_schema([spec])
+        # 2. schema of the changed classes
+        for cls in classes:
+            record = Collection.search([('slug', '=', cls._name), ('kind', '=', cls._kind)], limit=1)
+            digest = cls._hash()
+            if not force and record.code_hash == digest and record.code_module == cls._module:
+                continue
+            _logger.info("Payload CMS: synchronising %s '%s' from module %s", cls._kind, cls._name, cls._module)
+            Collection._sync_schema([cls._spec()])
+            record.write({'code_module': cls._module, 'code_hash': digest})
+
+    @api.model
+    def _payload_default_sequences(self):
+        """Navigation order: Pages, Posts, Media, Users, then the other
+        collections (code-first modules, builder)."""
+        defaults = {'pages': 10, 'posts': 20, 'media': 30}
+        for record in self.sudo().with_context(active_test=False).search([('kind', '=', 'collection')]):
+            if record.slug in defaults:
+                if record.sequence != defaults[record.slug]:
+                    record.sequence = defaults[record.slug]
+            elif record.sequence <= 40 and not record.code_module:
+                record.sequence = 100
+        return True
 
     @api.model
     def _install_multitenancy(self):
