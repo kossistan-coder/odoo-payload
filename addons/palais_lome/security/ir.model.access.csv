@@ -1,2 +1,0 @@
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_palais_lome_palais_lome,palais_lome.palais_lome,model_palais_lome_palais_lome,base.group_user,1,1,1,1
