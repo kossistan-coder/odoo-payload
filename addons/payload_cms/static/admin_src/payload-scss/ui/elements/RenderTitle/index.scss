@@ -1,0 +1,10 @@
+
+@layer payload-default {
+  .render-title {
+    display: inline-block;
+    &__id {
+      vertical-align: middle;
+      position: relative;
+    }
+  }
+}

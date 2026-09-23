@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="payload.CellWrap">
+        <button t-if="props.onSelect and props.linked" type="button" class="default-cell__first-cell" t-on-click="onClick"><t t-slot="default"/></button>
+        <a t-elif="props.linked" t-att-href="props.href"><t t-slot="default"/></a>
+        <span t-else=""><t t-slot="default"/></span>
+    </t>
+
+    <t t-name="payload.Cell">
+        <t t-set="type" t-value="field.type"/>
+        <t t-set="content">
+            <t t-if="type === 'id'"><code class="code-cell" style="white-space: nowrap"><span t-esc="'ID: ' + props.doc.id"/></code></t>
+            <t t-elif="type === 'upload-file'">
+                <div class="file">
+                    <Thumbnail size="'small'" className="'file__thumbnail'" src="thumbnailSrc" alt="props.doc.filename"/>
+                    <span class="file__filename" t-esc="props.doc.filename"/>
+                </div>
+            </t>
+            <t t-elif="type === 'array' or type === 'blocks'"><span t-esc="arrayText"/></t>
+            <t t-elif="isEmpty">
+                <t t-if="type === 'date'"><span/></t>
+                <t t-elif="type === 'relationship' or type === 'upload'"><div class="relationship-cell" t-esc="noLabel"/></t>
+                <t t-else="" t-esc="noLabel"/>
+            </t>
+            <t t-elif="type === 'date'"><span t-esc="text"/></t>
+            <t t-elif="type === 'select' or type === 'radio'"><span t-att-class="selectInfo.className" t-esc="selectInfo.label"/></t>
+            <t t-elif="type === 'checkbox'"><code class="bool-cell"><span t-esc="value ? 'true' : 'false'"/></code></t>
+            <t t-elif="type === 'code'"><code class="code-cell"><span t-esc="text"/></code></t>
+            <t t-elif="type === 'json'"><code class="json-cell"><span t-esc="text"/></code></t>
+            <t t-elif="type === 'upload'">
+                <div class="relationship-cell">
+                    <t t-if="uploadDocs.length">
+                        <t t-foreach="uploadDocs" t-as="u" t-key="u.id">
+                            <div class="file">
+                                <Thumbnail size="'small'" className="'file__thumbnail'" src="u.thumbnailURL || u.url" alt="u.filename"/>
+                                <span class="file__filename" t-esc="u.filename"/>
+                            </div>
+                        </t>
+                    </t>
+                    <t t-else="" t-esc="relationText"/>
+                </div>
+            </t>
+            <t t-elif="type === 'relationship'"><div class="relationship-cell" t-esc="relationText"/></t>
+            <t t-elif="type === 'textarea'"><span t-esc="text"/></t>
+            <t t-else="" t-esc="text"/>
+        </t>
+        <button t-if="props.onSelect and props.linked" type="button" class="default-cell__first-cell" t-on-click="onClick"><t t-out="content"/></button>
+        <a t-elif="props.linked" t-att-href="props.href"><t t-out="content"/></a>
+        <span t-else=""><t t-out="content"/></span>
+    </t>
+
+    <t t-name="payload.ConditionValue">
+        <t t-if="kind === 'exists' or kind === 'checkbox'">
+            <Select className="'condition-value-select'" isClearable="false" isSearchable="false" value="props.value"
+                    options="[{value: 'true', label: t('general:true')}, {value: 'false', label: t('general:false')}]"
+                    onChange="(v) => this.setValue(v)" disabled="props.disabled"/>
+        </t>
+        <t t-elif="kind === 'select'">
+            <Select className="'condition-value-select'" isMulti="isMulti" value="isMulti ? multiValue : props.value"
+                    options="field.options || []" onChange="(v) => this.setValue(v)" disabled="props.disabled"/>
+        </t>
+        <t t-elif="kind === 'relationship'">
+            <div class="field-type condition-value-relationship">
+                <Select className="'condition-value-relationship__select'" isMulti="isMulti"
+                        value="isMulti ? numericValues : numericValue"
+                        options="state.options" isLoading="state.loading" getLabel="(id) => this.relationLabel(id)"
+                        onMenuOpen="() => this.loadRelations()" onInputChange="(q) => this.onSearch(q)"
+                        onChange="(v) => this.setValue(v)" disabled="props.disabled"/>
+            </div>
+        </t>
+        <t t-elif="kind === 'number'">
+            <input class="condition-value-number" type="number" t-att-placeholder="t('general:enterAValue')" t-att-value="props.value"
+                   t-on-input="(ev) => this.setValue(ev.target.value)" t-att-disabled="props.disabled"/>
+        </t>
+        <t t-elif="kind === 'date'">
+            <div class="condition-value-date">
+                <div class="date-time-picker date-time-picker__appearance--default">
+                    <div class="date-time-picker__input-wrapper">
+                        <div class="react-datepicker-wrapper"><div class="react-datepicker__input-container">
+                            <input type="date" t-att-value="props.value" t-on-change="(ev) => this.setValue(ev.target.value)" t-att-disabled="props.disabled"/>
+                        </div></div>
+                    </div>
+                </div>
+            </div>
+        </t>
+        <t t-else="">
+            <input class="condition-value-text" type="text" t-att-placeholder="t('general:enterAValue')" t-att-value="props.value"
+                   t-on-input="(ev) => this.setValue(ev.target.value)" t-att-disabled="props.disabled"/>
+        </t>
+    </t>
+
+    <t t-name="payload.WhereBuilder">
+        <div class="where-builder">
+            <t t-if="!props.conditions.length">
+                <div class="where-builder__no-filters">
+                    <div class="where-builder__label" t-esc="t('general:noFiltersSet')"/>
+                    <Button className="'where-builder__add-first-filter'" icon="'plus'" iconStyle="'with-border'" iconPosition="'left'"
+                            buttonStyle="'icon-label'" label="t('general:addFilter')" onClick="() => this.addFirst()"/>
+                </div>
+            </t>
+            <t t-else="">
+                <p class="where-builder__label" t-esc="t('general:filterWhere', {label: props.pluralLabel})"/>
+                <ul class="where-builder__or-filters">
+                    <t t-foreach="props.conditions" t-as="group" t-key="group_index">
+                        <li>
+                            <div t-if="group_index > 0" class="where-builder__label" t-esc="t('general:or')"/>
+                            <ul class="where-builder__and-filters">
+                                <t t-foreach="andsOf(group)" t-as="cond" t-key="cond_index">
+                                    <li>
+                                        <div t-if="cond_index > 0" class="where-builder__label" t-esc="t('general:and')"/>
+                                        <div class="condition">
+                                            <div class="condition__wrap">
+                                                <div class="condition__inputs">
+                                                    <div class="condition__field">
+                                                        <Select isClearable="false" value="cond.field" options="fieldOptions" onChange="(v) => this.setField(cond, v)"/>
+                                                    </div>
+                                                    <div class="condition__operator">
+                                                        <Select isClearable="false" isSearchable="false" value="cond.operator" options="operatorOptions(cond.field)"
+                                                                onChange="(v) => this.setOperator(cond, v)"/>
+                                                    </div>
+                                                    <div class="condition__value">
+                                                        <ConditionValue t-key="cond.field + ':' + cond.operator" field="column(cond.field)?.field" operator="cond.operator"
+                                                                        value="cond.value" onChange="(v) => this.setValue(cond, v)"/>
+                                                    </div>
+                                                </div>
+                                                <div class="condition__actions">
+                                                    <Button className="'condition__actions-remove'" icon="'x'" iconStyle="'with-border'" buttonStyle="'icon-label'" round="true"
+                                                            onClick="() => this.remove(group_index, cond_index)"/>
+                                                    <Button className="'condition__actions-add'" icon="'plus'" iconStyle="'with-border'" buttonStyle="'icon-label'" round="true"
+                                                            onClick="() => this.addAnd(group_index, cond_index)"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </t>
+                            </ul>
+                        </li>
+                    </t>
+                </ul>
+                <Button className="'where-builder__add-or'" icon="'plus'" iconStyle="'with-border'" iconPosition="'left'" buttonStyle="'icon-label'"
+                        label="t('general:or')" onClick="() => this.addOr()"/>
+            </t>
+        </div>
+    </t>
+
+    <t t-name="payload.ColumnSelector">
+        <div class="pill-selector">
+            <t t-foreach="props.columns" t-as="col" t-key="col.accessor">
+                <t t-set="def" t-value="props.definitions.find((d) => d.accessor === col.accessor)"/>
+                <button t-if="def" type="button" t-att-id="col.accessor" t-att-aria-checked="col.active ? 'true' : 'false'" role="button" tabindex="0"
+                        draggable="true" style="cursor: grab"
+                        t-att-class="'pill pill--style-light pill--size-small pill-selector__pill' + (col.active ? ' pill-selector__pill--selected' : '') + ' pill--has-action pill--has-icon pill--align-icon-left pill--draggable'"
+                        t-on-click="() => props.onToggle(col.accessor)"
+                        t-on-dragstart="(ev) => ev.dataTransfer.setData('text/plain', '' + col_index)"
+                        t-on-dragover.prevent="onDragOver"
+                        t-on-drop.prevent="(ev) => props.onMove(+ev.dataTransfer.getData('text/plain'), col_index)">
+                    <span class="pill__label"><span class="field-label unstyled" t-esc="def.label"/></span>
+                    <span class="pill__icon"><t t-out="icon(col.active ? 'x' : 'plus')"/></span>
+                </button>
+            </t>
+        </div>
+    </t>
+
+    <t t-name="payload.ListView">
+        <div t-att-class="'collection-list collection-list--' + slug">
+            <div t-att-class="'gutter' + (isDrawer ? '' : ' gutter--left gutter--right') + ' collection-list__wrap'">
+                <header t-att-class="'list-header' + (isDrawer ? ' list-drawer__header' : '')">
+                    <div class="list-header__content">
+                        <div class="list-header__title-and-actions">
+                            <h1 class="list-header__title" t-esc="collection.labels.plural"/>
+                            <div t-if="!collection.noCreate" class="list-header__title-actions">
+                                <button t-if="isDrawer" type="button" class="list-drawer__create-new-button doc-drawer__toggler"
+                                        t-att-aria-label="t('general:createNewLabel', {label: collection.labels.singular})" t-on-click="createNew">
+                                    <div class="pill pill--style-light pill--size-small"><span class="pill__label" t-esc="t('general:createNew')"/></div>
+                                </button>
+                                <a t-else="" t-att-aria-label="t('general:createNewLabel', {label: collection.labels.singular})"
+                                   t-att-title="t('general:createNewLabel', {label: collection.labels.singular})"
+                                   t-att-href="createURL"
+                                   class="btn list-create-new-doc__create-new-button btn--icon-style-without-border btn--size-small btn--withoutPopup btn--style-pill btn--withoutPopup">
+                                    <span class="btn__content"><span class="btn__label" t-esc="t('general:createNew')"/></span>
+                                </a>
+                            </div>
+                            <div t-if="canImportExport" class="list-header__title-actions import-export__buttons">
+                                <button t-if="!collection.upload" type="button" id="import-documents" t-on-click="openImport"
+                                        class="btn btn--icon-style-without-border btn--size-small btn--withoutPopup btn--style-pill btn--withoutPopup">
+                                    <span class="btn__content"><span class="btn__label">Import</span></span>
+                                </button>
+                                <button type="button" id="export-documents" t-on-click="() => this.openExport()"
+                                        class="btn btn--icon-style-without-border btn--size-small btn--withoutPopup btn--style-pill btn--withoutPopup">
+                                    <span class="btn__content"><span class="btn__label">Export</span></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="list-header__actions">
+                            <ViewSwitcher t-if="showViewSwitcher" current="viewMode" onChange="(m) => this.setViewMode(m)"/>
+                            <div t-if="!isDrawer and selectedCount > 0" class="list-selection">
+                                <span t-esc="selectedCount + '  selected'"/>
+                                <t t-if="!state.selectAllAvailable and state.meta and selectedCount &lt; state.meta.totalDocs and allSelected">
+                                    <span>—</span>
+                                    <div class="list-selection__actions">
+                                        <button type="button" id="select-all-across-pages" t-on-click="() => state.selectAllAvailable = true"
+                                                class="btn list-selection__button btn--icon-style-without-border btn--size-medium btn--withoutPopup btn--style-none btn--withoutPopup">
+                                            <span class="btn__content"><span class="btn__label" t-esc="'Select all (' + state.meta.totalDocs + ') '"/></span>
+                                        </button>
+                                    </div>
+                                </t>
+                                <span>—</span>
+                                <div class="list-selection__actions">
+                                    <t t-if="collection.versions?.drafts">
+                                        <button type="button" t-on-click="() => this.bulkStatus('published')"
+                                                class="btn list-selection__button btn--icon-style-without-border btn--size-medium btn--withoutPopup btn--style-none btn--withoutPopup">
+                                            <span class="btn__content"><span class="btn__label" t-esc="t('version:publish')"/></span>
+                                        </button>
+                                        <button type="button" t-on-click="() => this.bulkStatus('draft')"
+                                                class="btn list-selection__button btn--icon-style-without-border btn--size-medium btn--withoutPopup btn--style-none btn--withoutPopup">
+                                            <span class="btn__content"><span class="btn__label" t-esc="t('version:unpublish')"/></span>
+                                        </button>
+                                    </t>
+                                    <button t-if="canImportExport" type="button" t-on-click="() => this.openExport(true)"
+                                            class="btn list-selection__button btn--icon-style-without-border btn--size-medium btn--withoutPopup btn--style-none btn--withoutPopup">
+                                        <span class="btn__content"><span class="btn__label">Export</span></span>
+                                    </button>
+                                    <button t-if="!collection.isUsers" type="button" aria-label="Delete" t-on-click="bulkDelete"
+                                            class="btn list-selection__button delete-documents__toggle btn--icon-style-without-border btn--size-medium btn--withoutPopup btn--style-none btn--withoutPopup">
+                                        <span class="btn__content"><span class="btn__label" t-esc="t('general:delete')"/></span>
+                                    </button>
+                                </div>
+                            </div>
+                            <button t-if="isDrawer" type="button" aria-label="Close" class="close-modal-button list-drawer__header-close" t-on-click="() => props.close()">
+                                <t t-out="icon('x')"/>
+                            </button>
+                        </div>
+                    </div>
+                    <div t-if="collection.admin?.description or collectionOptions.length > 1" class="list-header__after-header-content">
+                        <div t-if="collection.admin?.description" class="collection-list__sub-header"><div class="custom-view-description" t-esc="collection.admin.description"/></div>
+                        <div t-if="collectionOptions.length > 1" class="list-drawer__select-collection-wrap">
+                            <span class="field-label" t-esc="t('upload:selectCollectionToBrowse')"/>
+                            <Select className="'list-header__select-collection'" isClearable="false" value="slug" options="collectionOptions" onChange="(v) => this.switchCollection(v)"/>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="list-controls">
+                    <div class="search-bar">
+                        <t t-out="icon('search')"/>
+                        <div class="search-filter">
+                            <input t-att-aria-label="searchPlaceholder" class="search-filter__input" id="search-filter-input"
+                                   t-att-placeholder="searchPlaceholder" type="text" t-att-value="state.search" t-on-input="onSearchInput"/>
+                        </div>
+                        <div class="search-bar__actions">
+                            <Pill t-if="viewMode === 'list'" className="'list-controls__toggle-columns'" size="'small'" id="'toggle-list-columns'" controls="'list-controls-columns'"
+                                  expanded="state.drawer === 'columns'" label="t('general:columns')" icon="state.drawer === 'columns' ? 'chevron--up' : 'chevron'"
+                                  onClick="() => this.toggleDrawer('columns')"/>
+                            <Pill className="'list-controls__toggle-where'" size="'small'" id="'toggle-list-filters'" controls="'list-controls-where'"
+                                  expanded="state.drawer === 'where'" label="t('general:filters')" icon="state.drawer === 'where' ? 'chevron--up' : 'chevron'"
+                                  onClick="() => this.toggleDrawer('where')"/>
+                        </div>
+                    </div>
+                    <AnimateHeight className="'list-controls__columns'" id="'list-controls-columns'" open="state.drawer === 'columns'">
+                        <ColumnSelector columns="state.columns" definitions="allColumns" onToggle="(a) => this.toggleColumn(a)"
+                                        onMove="(from, to) => this.moveColumn(from, to)"/>
+                    </AnimateHeight>
+                    <AnimateHeight className="'list-controls__where'" id="'list-controls-where'" open="state.drawer === 'where'">
+                        <WhereBuilder conditions="state.conditions" columns="allColumns" pluralLabel="collection.labels.plural"
+                                      onChange="(c) => this.onConditionsChange(c)"/>
+                    </AnimateHeight>
+                </div>
+
+                <t t-if="viewMode !== 'list'">
+                    <t t-component="viewComponent" t-key="viewKey" collection="collection" where="buildWhere()"/>
+                </t>
+                <t t-elif="state.docs.length">
+                    <div class="collection-list__tables">
+                        <div class="table-wrap">
+                            <div class="table">
+                                <table cellpadding="0" cellspacing="0" t-if="activeColumns.length">
+                                    <thead>
+                                        <tr>
+                                            <th t-if="canSelect" id="heading-_select">
+                                                <CheckboxInput className="'select-all select-all__checkbox'" id="'select-all'" name="'select-all'"
+                                                               ariaLabel="allSelected ? t('general:deselectAllRows') : t('general:selectAllRows')"
+                                                               checked="allSelected" partialChecked="state.selected.length > 0 and !allSelected"
+                                                               onToggle="() => this.toggleAll()"/>
+                                            </th>
+                                            <t t-foreach="activeColumns" t-as="col" t-key="col.accessor">
+                                                <th t-att-id="'heading-' + col.accessor.replaceAll('.', '__')">
+                                                    <div class="sort-column">
+                                                        <span class="sort-column__label"><span class="field-label unstyled" t-esc="col.label"/></span>
+                                                        <div t-if="isSortable(col)" class="sort-column__buttons">
+                                                            <button type="button" t-att-aria-label="t('general:sortByLabelDirection', {label: col.label, direction: t('general:ascending')})"
+                                                                    t-att-class="'sort-column__asc' + ((state.query.sort || collection.defaultSort) === col.accessor ? ' sort-column--active' : '') + ' sort-column__button'"
+                                                                    t-on-click="() => this.sort(col.accessor, false)">
+                                                                <t t-out="icon('chevron--up')"/>
+                                                            </button>
+                                                            <button type="button" t-att-aria-label="t('general:sortByLabelDirection', {label: col.label, direction: t('general:descending')})"
+                                                                    t-att-class="'sort-column__desc' + ((state.query.sort || collection.defaultSort) === '-' + col.accessor ? ' sort-column--active' : '') + ' sort-column__button'"
+                                                                    t-on-click="() => this.sort(col.accessor, true)">
+                                                                <t t-out="icon('chevron')"/>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </th>
+                                            </t>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="state.docs" t-as="doc" t-key="doc.id">
+                                            <tr t-att-class="'row-' + (doc_index + 1)" t-att-data-id="doc.id">
+                                                <td t-if="canSelect" class="cell-_select">
+                                                    <CheckboxInput className="'select-row select-row__checkbox'" checked="state.selectAllAvailable or state.selected.includes(doc.id)"
+                                                                   onToggle="() => this.toggleRow(doc.id)"/>
+                                                </td>
+                                                <t t-foreach="activeColumns" t-as="col" t-key="col.accessor">
+                                                    <td t-att-class="'cell-' + col.accessor">
+                                                        <Cell column="col" doc="doc" linked="col_index === 0" href="docHref(doc)"
+                                                              relations="state.relations" onSelect="isDrawer ? (d) => this.selectDoc(d) : null"/>
+                                                    </td>
+                                                </t>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                                <div t-else="">No columns selected</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="page-controls" t-if="state.meta">
+                        <div t-if="state.meta.hasPrevPage or state.meta.hasNextPage" class="paginator">
+                            <button t-att-class="'clickable-arrow' + (!state.meta.hasPrevPage ? ' clickable-arrow--is-disabled' : '') + ' clickable-arrow--left'" type="button"
+                                    t-att-disabled="!state.meta.hasPrevPage" t-on-click="() => this.goPage(state.meta.prevPage)"><t t-out="icon('chevron')"/></button>
+                            <button t-att-class="'clickable-arrow' + (!state.meta.hasNextPage ? ' clickable-arrow--is-disabled' : '') + ' clickable-arrow--right'" type="button"
+                                    t-att-disabled="!state.meta.hasNextPage" t-on-click="() => this.goPage(state.meta.nextPage)"><t t-out="icon('chevron')"/></button>
+                            <button t-if="state.meta.page > 2" class="paginator__page paginator__page--is-first-page" type="button" t-on-click="() => this.goPage(1)">1</button>
+                            <span t-if="state.meta.page - 2 >= 2" class="paginator__separator">—</span>
+                            <t t-foreach="pages" t-as="n" t-key="n">
+                                <button t-att-class="'paginator__page' + (n === state.meta.page ? ' paginator__page--is-current' : '')" type="button"
+                                        t-on-click="() => this.goPage(n)" t-esc="n"/>
+                            </t>
+                            <span t-if="state.meta.page + 2 &lt; state.meta.totalPages" class="paginator__separator">—</span>
+                            <button t-if="state.meta.page + 1 &lt; state.meta.totalPages" class="paginator__page paginator__page--is-last-page" type="button"
+                                    t-on-click="() => this.goPage(state.meta.totalPages)" t-esc="state.meta.totalPages"/>
+                        </div>
+                        <t t-if="state.meta.totalDocs > 0">
+                            <div class="page-controls__page-info" t-esc="pageInfo"/>
+                            <div class="per-page">
+                                <Popup horizontalAlign="'right'" size="'small'">
+                                    <t t-set-slot="button">
+                                        <div class="per-page__base-button"><span t-esc="t('general:perPage', {limit: state.meta.limit})"/> <t t-out="icon('chevron', 'per-page__icon')"/></div>
+                                    </t>
+                                    <div class="popup-button-list popup-button-list__text-align--left popup-button-list__button-size--default">
+                                        <t t-foreach="perPageOptions" t-as="n" t-key="n">
+                                            <button type="button" t-att-class="'popup-button-list__button per-page__button' + (n === state.meta.limit ? ' per-page__button-active' : '')"
+                                                    t-on-click="() => this.setLimit(n)">
+                                                <div t-if="n === state.meta.limit" class="per-page__chevron"><t t-out="icon('chevron--right--size-small')"/></div> <span t-esc="n"/>
+                                            </button>
+                                        </t>
+                                    </div>
+                                </Popup>
+                            </div>
+                        </t>
+                    </div>
+                </t>
+                <t t-elif="!state.loading">
+                    <div class="no-results">
+                        <h3 t-esc="t('general:noResultsFound')"/>
+                        <p t-esc="t('general:noResultsDescription')"/>
+                        <div t-if="!collection.noCreate" class="no-results__actions">
+                            <Button label="t('general:createNewLabel', {label: collection.labels.singular})" onClick="() => this.createNew()"/>
+                        </div>
+                    </div>
+                </t>
+            </div>
+        </div>
+    </t>
+
+</templates>

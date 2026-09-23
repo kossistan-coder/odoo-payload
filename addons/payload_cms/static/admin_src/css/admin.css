@@ -1,0 +1,39 @@
+/*
+ * Entry point of the admin stylesheet.
+ *  1. Payload's own SCSS (compiled by build.mjs into .build/payload.css) in @layer payload-default
+ *  2. Runtime styles of Payload's React dependencies
+ *  3. Tailwind CSS v4 (theme mapped on Payload's design tokens + utilities) for the glue UI.
+ * Tailwind's preflight is not imported: Payload ships its own reset.
+ */
+@layer payload-default, payload, theme, base, components, utilities;
+
+@import "../.build/payload.css";
+@import "./vendor-runtime.css";
+@import "./vendor-sonner.css" layer(payload-default);
+@import "./odoo-extras.css" layer(payload);
+@import "./fonts.css";
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@source "../../src/admin";
+/* Payload's `.table` wrapper (overflow container of the lists) must not become Tailwind's
+   `display: table` utility, which shrank the lists to the width of their content. */
+@source not inline("table");
+
+@theme {
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+  --color-elevation-0: var(--theme-elevation-0);
+  --color-elevation-50: var(--theme-elevation-50);
+  --color-elevation-100: var(--theme-elevation-100);
+  --color-elevation-150: var(--theme-elevation-150);
+  --color-elevation-200: var(--theme-elevation-200);
+  --color-elevation-400: var(--theme-elevation-400);
+  --color-elevation-500: var(--theme-elevation-500);
+  --color-elevation-800: var(--theme-elevation-800);
+  --color-elevation-1000: var(--theme-elevation-1000);
+  --color-success-500: var(--theme-success-500);
+  --color-error-500: var(--theme-error-500);
+  --spacing-base: var(--base);
+}

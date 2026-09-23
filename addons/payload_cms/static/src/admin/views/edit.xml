@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="payload.DocumentHeader">
+        <div class="gutter gutter--left gutter--right doc-header">
+            <div class="doc-header__header">
+                <h1 t-att-class="'doc-header__title render-title' + (props.titleIsId ? ' render-title--has-id' : '')" t-att-data-doc-id="props.docId" t-att-title="props.title">
+                    <div t-if="props.titleIsId" class="id-label render-title__id" t-att-title="props.docId">ID: <t t-esc="props.docId"/></div>
+                    <t t-else="" t-esc="props.title"/>
+                </h1>
+                <div t-if="props.showTabs" class="doc-tabs">
+                    <div class="doc-tabs__tabs-container">
+                        <ul class="doc-tabs__tabs">
+                            <t t-foreach="props.tabs" t-as="tab" t-key="tab.key">
+                                <div t-if="tab.active" t-att-aria-label="tab.label" t-att-title="tab.label" aria-disabled="true"
+                                     class="btn doc-tab doc-tab--active btn--icon-style-without-border btn--size-medium btn--withoutPopup btn--no-margin btn--style-tab btn--disabled btn--withoutPopup">
+                                    <span class="btn__content"><span class="btn__label"><span class="doc-tab__label"><t t-esc="tab.label"/><t t-if="tab.count"> <span class="pill-version-count" t-esc="tab.count"/></t></span></span></span>
+                                </div>
+                                <a t-else="" t-att-href="tab.href" t-att-aria-label="tab.label" t-att-title="tab.label"
+                                   class="btn doc-tab btn--icon-style-without-border btn--size-medium btn--withoutPopup btn--no-margin btn--style-tab btn--withoutPopup">
+                                    <span class="btn__content"><span class="btn__label"><span class="doc-tab__label"><t t-esc="tab.label"/><t t-if="tab.count"> <span class="pill-version-count" t-esc="tab.count"/></t></span></span></span>
+                                </a>
+                            </t>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div t-if="props.description" class="doc-header__after-header"><div class="custom-view-description" t-esc="props.description"/></div>
+        </div>
+    </t>
+
+    <t t-name="payload.EditView">
+        <t t-if="state.loading">
+            <div class="gutter gutter--left gutter--right" style="padding-top: calc(var(--base) * 2)"><ShimmerEffect height="'60px'"/></div>
+        </t>
+        <t t-elif="state.notFound">
+            <div class="not-found gutter gutter--left gutter--right">
+                <h1>Nothing found</h1>
+                <p>Sorry—there is nothing to correspond with your request.</p>
+            </div>
+        </t>
+        <t t-else="">
+            <!-- Header -->
+            <t t-if="isDrawer">
+                <div class="gutter gutter--left gutter--right doc-drawer__header">
+                    <div class="doc-drawer__header-content">
+                        <h2 class="doc-drawer__header-text"><span t-esc="title"/></h2>
+                        <button aria-label="Close" class="doc-drawer__header-close" type="button" t-on-click="() => props.close()"><t t-out="icon('x')"/></button>
+                    </div>
+                </div>
+            </t>
+            <t t-else="">
+                <DocumentHeader t-props="headerProps"/>
+                        </t>
+
+            <main t-att-class="'collection-edit' + ((docId or isGlobal) ? ' collection-edit--is-editing' : '') + (isGlobal ? ' global-edit--' + params.slug : ' collection-edit--' + params.slug) + (state.livePreview and livePreviewURL and !isDrawer ? ' collection-edit--is-live-previewing' : '')">
+                <form class="collection-edit__form form" novalidate="" t-on-submit.prevent="() => this.save(hasDrafts ? 'published' : undefined)">
+                    <!-- Document controls -->
+                    <div class="gutter gutter--left gutter--right doc-controls">
+                        <div class="doc-controls__wrapper">
+                            <div class="doc-controls__content">
+                                <ul class="doc-controls__meta">
+                                    <li t-if="isCreate" class="doc-controls__list-item">
+                                        <p class="doc-controls__value" t-esc="t('general:creatingNewLabel', {label: config.labels.singular})"/>
+                                    </li>
+                                    <t t-if="hasDrafts and !isCreate">
+                                        <li class="doc-controls__status doc-controls__list-item">
+                                            <div class="status" t-att-title="'Status: ' + statusLabel">
+                                                <div class="status__value-wrap">
+                                                    <span class="status__label">Status: </span>
+                                                    <span class="status__value" t-esc="statusLabel"/>
+                                                    <t t-if="status === 'changed'">
+                                                        <t t-esc="' — '"/>
+                                                        <Button id="'action-revert-to-published'" className="'status__action'" buttonStyle="'none'"
+                                                                label="t('version:revertToPublished')" onClick="() => this.revertToPublished()"/>
+                                                    </t>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <li t-if="autosaveEnabled" class="doc-controls__list-item">
+                                            <div class="autosave" t-esc="autosaveText"/>
+                                        </li>
+                                    </t>
+                                    <t t-if="!isCreate and state.doc?.updatedAt">
+                                        <li class="doc-controls__list-item doc-controls__value-wrap" t-att-title="formatDate(state.doc.updatedAt)">
+                                            <p class="doc-controls__label">Last Modified: </p>
+                                            <p class="doc-controls__value" t-esc="formatDate(state.doc.updatedAt)"/>
+                                        </li>
+                                        <li class="doc-controls__list-item doc-controls__value-wrap" t-att-title="formatDate(state.doc.createdAt)">
+                                            <p class="doc-controls__label">Created: </p>
+                                            <p class="doc-controls__value" t-esc="formatDate(state.doc.createdAt)"/>
+                                        </li>
+                                    </t>
+                                </ul>
+                            </div>
+                            <div class="doc-controls__controls-wrapper">
+                                <div class="doc-controls__controls">
+                                    <button t-if="livePreviewURL and !isDrawer" type="button" id="live-preview-toggler"
+                                            t-att-class="'live-preview-toggler' + (state.livePreview ? ' live-preview-toggler--active' : '')"
+                                            t-att-aria-label="state.livePreview ? t('general:exitLivePreview') : t('general:livePreview')"
+                                            t-att-title="state.livePreview ? t('general:exitLivePreview') : t('general:livePreview')" t-on-click="toggleLivePreview">
+                                        <t t-out="icon(state.livePreview ? 'eye--active' : 'eye--inactive')"/>
+                                    </button>
+ <Popup t-if="localized and !isCreate" className="'doc-controls__translate'" horizontalAlign="'right'" size="'large'"
+                                           buttonType="'custom'" noBackground="true" disabled="state.processing" id="'translate-popup'">
+                                        <t t-set-slot="button">
+                                            <span class="translate-btn" title="Translate to…" aria-label="Translate to…"><t t-out="icon('translate')"/></span>
+                                        </t>
+                                        <t t-set-slot="default" t-slot-scope="scope">
+                                            <div class="popup-button-list popup-button-list__text-align--left popup-button-list__button-size--default translate-menu">
+                                                <div class="translate-menu__title">Translate <t t-esc="currentLocaleLabel"/> to…</div>
+                                                <t t-if="translateReady">
+                                                    <t t-foreach="translateTargets" t-as="loc" t-key="loc.code">
+                                                        <PopupButton id="'translate-to-' + loc.code" onClick="() => this.translateTo([loc.code], scope.close)">
+                                                            <t t-esc="loc.label || loc.code"/> <span class="translate-menu__code" t-esc="'(' + loc.code + ')'"/>
+                                                        </PopupButton>
+                                                    </t>
+                                                    <PopupButton t-if="translateTargets.length > 1" id="'translate-to-all'" onClick="() => this.translateTo(translateTargets.map((l) => l.code), scope.close)">All locales</PopupButton>
+                                                </t>
+                                                <PopupButton t-else="" href="'/admin/config/localization'">Configure a translation service…</PopupButton>
+                                            </div>
+                                        </t>
+                                    </Popup>
+                                    <a t-if="previewURL and !isCreate and !isDrawer and config.admin?.preview" id="preview-button" class="preview-btn" t-att-href="previewURL" target="_blank"
+                                       aria-label="Preview" title="Preview" data-external="1"><t t-out="icon('external-link')"/></a>
+                                    <t t-if="hasDrafts">
+                                        <div t-if="!autosaveEnabled" class="form-submit">
+                                            <Button id="'action-save-draft'" className="'save-draft'" buttonStyle="'secondary'" label="t('version:saveDraft')"
+                                                    disabled="state.processing or (!state.modified and !isCreate)" onClick="() => this.save('draft')"/>
+                                        </div>
+                                        <div class="form-submit">
+                                            <Button id="'action-save'" label="t('version:publishChanges')" disabled="state.processing or !canPublish"
+                                                    onClick="() => this.save('published')"/>
+                                        </div>
+                                    </t>
+                                    <div t-else="" class="form-submit">
+                                        <Button id="'action-save'" label="t('general:save')" disabled="state.processing or (!state.modified and !isCreate)"
+                                                onClick="() => this.save()"/>
+                                    </div>
+                                </div>
+                                <Popup t-if="!isCreate and (!isGlobal or hasDrafts or canTranslate or odooURL)" className="'doc-controls__popup'" horizontalAlign="'right'" size="'large'"
+                                       disabled="state.processing">
+                                    <t t-set-slot="button"><div class="doc-controls__dots"><div/><div/><div/></div></t>
+                                    <div class="popup-button-list popup-button-list__text-align--left popup-button-list__button-size--default">
+                                        <t t-if="!isGlobal">
+                                            <PopupButton id="'action-create'" href="createURL"><t t-esc="t('general:createNew')"/></PopupButton>
+                                            <PopupButton t-if="!config.isUsers and !config.upload and !config.virtual" id="'action-duplicate'" onClick="() => this.duplicate()"><t t-esc="t('general:duplicate')"/></PopupButton>
+                                            <PopupButton id="'action-delete'" onClick="() => this.remove()"><t t-esc="t('general:delete')"/></PopupButton>
+                                        </t>
+ <PopupButton t-if="odooURL" id="'action-open-odoo'" onClick="() => this.openInOdoo()">Open in Odoo (chatter, activities)</PopupButton>
+                                        <PopupButton t-if="canTranslate" id="'action-translate'" onClick="() => this.translate()">Translate from <t t-esc="defaultLocaleLabel"/></PopupButton>
+                                        <PopupButton t-if="hasDrafts and status !== 'draft'" id="'action-unpublish'" onClick="() => this.unpublish()"><t t-esc="t('version:unpublish')"/></PopupButton>
+                                    </div>
+                                </Popup>
+                            </div>
+                        </div>
+                        <div class="doc-controls__divider"/>
+                    </div>
+
+                    <div class="collection-edit__main-wrapper">
+                        <div class="collection-edit__main">
+                            <div t-att-class="'document-fields ' + (split.sidebar.length ? 'document-fields--has-sidebar' : 'document-fields--no-sidebar') + (state.livePreview and livePreviewURL and !isDrawer ? ' document-fields--force-sidebar-wrap' : '')">
+                                <div class="document-fields__main">
+                                    <div class="gutter gutter--left gutter--right document-fields__edit">
+                                        <!-- Localization hints -->
+                                        <Banner t-if="localeHint" type="'default'" className="'locale-hint'"><t t-esc="localeHint"/></Banner>
+                                        <!-- Upload collections -->
+                                        <div t-if="uploadConfig" t-att-class="'field-type file-field' + (formState.errors.file ? ' error' : '')">
+                                            <aside t-if="formState.errors.file" class="tooltip field-error tooltip--show tooltip--caret-right tooltip--position-top"><div class="tooltip-content" t-esc="formState.errors.file"/></aside>
+                                            <t t-if="showFileDetails">
+                                                <div class="file-details">
+                                                    <header>
+                                                        <Thumbnail className="'file-details__thumbnail'" size="'medium'" src="state.doc.thumbnailURL || (state.doc.mimeType?.startsWith('image/') ? state.doc.url : null)" alt="state.doc.filename"/>
+                                                        <div class="file-details__main-detail">
+                                                            <div class="file-meta">
+                                                                <div class="file-meta__url">
+                                                                    <a t-att-href="state.doc.url" target="_blank" rel="noopener noreferrer" data-external="1" t-esc="state.doc.filename"/>
+                                                                    <button type="button" class="copy-to-clipboard" title="Copy URL" t-on-click="copyUrl"><t t-out="icon('copy')"/></button>
+                                                                </div>
+                                                                <div class="file-meta__size-type" t-esc="fileMeta"/>
+                                                            </div>
+                                                            <div t-if="canEditImage" class="file-field__upload-actions">
+                                                                <Button className="'file-field__edit'" size="'small'" buttonStyle="'pill'" margin="false"
+                                                                        label="t('upload:editImage')" onClick="() => this.editImage()"/>
+                                                            </div>
+                                                        </div>
+                                                        <Button className="'file-details__remove'" icon="'x'" iconStyle="'with-border'" buttonStyle="'icon-label'" round="true"
+                                                                onClick="() => this.removeFile()"/>
+                                                    </header>
+                                                </div>
+                                            </t>
+                                            <div t-else="" class="file-field__upload">
+                                                <t t-if="!state.file">
+                                                    <div t-att-class="'dropzone' + (state.dragging ? ' dragging' : '') + ' dropzoneStyle--default'"
+                                                         t-on-dragenter.prevent="() => state.dragging = true" t-on-dragover.prevent="() => state.dragging = true"
+                                                         t-on-dragleave="() => state.dragging = false" t-on-drop="onDrop">
+                                                        <div class="file-field__dropzoneContent">
+                                                            <div class="file-field__dropzoneButtons">
+                                                                <Button size="'small'" buttonStyle="'pill'" label="t('upload:selectFile')" onClick="() => this.fileInput.el.click()"/>
+                                                                <input t-ref="fileInput" type="file" hidden="" aria-hidden="true" class="file-field__hidden-input" t-att-accept="acceptTypes" t-on-change="onFileInput"/>
+                                                            </div>
+                                                            <p class="file-field__dragAndDropText" t-esc="t('general:or') + ' ' + t('upload:dragAndDrop')"/>
+                                                        </div>
+                                                    </div>
+                                                </t>
+                                                <t t-else="">
+                                                    <div class="file-field__thumbnail-wrap">
+                                                        <Thumbnail size="'medium'" src="state.filePreview" alt="state.filename"/>
+                                                    </div>
+                                                    <div class="file-field__file-adjustments">
+                                                        <input type="text" class="file-field__filename" t-att-value="state.filename" t-att-title="state.filename"
+                                                               t-on-input="(ev) => state.filename = ev.target.value"/>
+                                                    </div>
+                                                    <Button className="'file-field__remove'" icon="'x'" iconStyle="'with-border'" buttonStyle="'icon-label'" round="true"
+                                                            tooltip="t('general:cancel')" onClick="() => this.removeFile()"/>
+                                                </t>
+                                            </div>
+                                        </div>
+                                        <!-- Auth collection controls -->
+                                        <div t-if="config.isUsers and !isCreate" class="auth-fields collection-edit__auth">
+                                            <div class="auth-fields__controls">
+                                                <Button t-if="!state.changingPassword" id="'change-password'" buttonStyle="'secondary'" size="'medium'"
+                                                        label="t('authentication:changePassword')" onClick="() => state.changingPassword = true"/>
+                                                <Button t-else="" id="'cancel-change-password'" buttonStyle="'secondary'" size="'medium'"
+                                                        label="t('general:cancel')" onClick="() => state.changingPassword = false"/>
+                                            </div>
+                                        </div>
+                                        <RenderFields t-key="state.formKey" fields="split.main" data="data" path="''" className="'document-fields__fields'"/>
+                                    </div>
+                                </div>
+                                <div t-if="split.sidebar.length" class="document-fields__sidebar-wrap">
+                                    <div class="document-fields__sidebar">
+                                        <div class="document-fields__sidebar-fields">
+                                            <RenderFields t-key="state.formKey" fields="split.sidebar" data="data" path="''"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <LivePreviewWindow t-if="livePreviewURL and !isDrawer and state.livePreview" url="livePreviewURL"
+                                           breakpoints="livePreviewConfig.breakpoints || []"
+                                           collectionSlug="isGlobal ? null : params.slug" globalSlug="isGlobal ? params.slug : null"
+                                           getData="() => this.getPreviewData()" register="(c) => this.registerLivePreview(c)"/>
+                    </div>
+                </form>
+            </main>
+        </t>
+    </t>
+
+    <t t-name="payload.LivePreviewWindow">
+        <div t-att-class="'live-preview-window live-preview-window--is-live-previewing' + (state.breakpoint !== 'responsive' ? ' live-preview-window--has-breakpoint' : '')">
+            <div class="live-preview-window__wrapper">
+                <div class="live-preview-toolbar live-preview-toolbar--static">
+                    <div class="live-preview-toolbar-controls">
+                        <Popup className="'live-preview-toolbar-controls__breakpoint'" horizontalAlign="'right'" showScrollbar="true">
+                            <t t-set-slot="button">
+                                <span t-esc="breakpointLabel"/>
+                                <t t-out="icon('chevron', 'live-preview-toolbar-controls__chevron')"/>
+                            </t>
+                            <div class="popup-button-list popup-button-list__text-align--left popup-button-list__button-size--default">
+                                <t t-foreach="breakpoints" t-as="bp" t-key="bp.name">
+                                    <PopupButton active="state.breakpoint === bp.name" onClick="() => this.setBreakpoint(bp)"><t t-esc="bp.label"/></PopupButton>
+                                </t>
+                                <PopupButton t-if="state.breakpoint === 'custom'" active="true" onClick="() => this.noop()"><t t-esc="t('general:custom')"/></PopupButton>
+                            </div>
+                        </Popup>
+                        <div class="live-preview-toolbar-controls__device-size">
+                            <input class="toolbar-input" type="number" min="0" step="1" name="live-preview-width" t-att-value="inputWidth" t-on-change="(ev) => this.setSize('width', ev)"/>
+                            <span class="live-preview-toolbar-controls__size-divider"><t t-out="icon('x')"/></span>
+                            <input class="toolbar-input" type="number" min="0" step="1" name="live-preview-height" t-att-value="inputHeight" t-on-change="(ev) => this.setSize('height', ev)"/>
+                        </div>
+                        <Popup className="'live-preview-toolbar-controls__zoom'" horizontalAlign="'right'">
+                            <t t-set-slot="button">
+                                <span t-esc="zoomPercent + '%'"/>
+                                <t t-out="icon('chevron', 'live-preview-toolbar-controls__chevron')"/>
+                            </t>
+                            <div class="popup-button-list popup-button-list__text-align--left popup-button-list__button-size--default">
+                                <t t-foreach="zoomOptions" t-as="z" t-key="z">
+                                    <PopupButton active="zoomPercent === z" onClick="() => this.setZoom(z)"><t t-esc="z + '%'"/></PopupButton>
+                                </t>
+                            </div>
+                        </Popup>
+                        <a class="live-preview-toolbar-controls__external" t-att-href="props.url" target="_blank" data-external="1"
+                           t-att-title="t('general:openInNewWindow')"><t t-out="icon('external-link')"/></a>
+                    </div>
+                </div>
+                <div class="live-preview-window__main">
+                    <div style="height: 100%; width: 100%" t-ref="frame">
+                        <div t-att-style="deviceStyle">
+                            <div class="iframe-loader__container">
+                                <div t-if="state.loading" class="shimmer-effect shimmer-effect--transparent" role="status" aria-live="polite" style="height: 100%; width: 100%">
+                                    <div class="shimmer-effect__shine" style="animation-delay: 0ms"/>
+                                </div>
+                                <iframe t-ref="iframe" id="live-preview-iframe" t-att-class="'iframe-loader__iframe' + (state.loading ? ' iframe-loader__iframe--is-loading' : '')"
+                                        t-att-src="props.url" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads"
+                                        t-attf-style="transform: scale({{state.zoom}})" t-on-load="onLoad" title="Live Preview"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.EditUploadDrawer">
+        <div class="edit-upload">
+            <div class="edit-upload__header">
+                <h2 t-att-title="'Editing ' + props.filename" t-esc="'Editing ' + props.filename"/>
+                <div class="edit-upload__actions">
+                    <Button className="'edit-upload__cancel'" buttonStyle="'secondary'" ariaLabel="t('general:cancel')" label="t('general:cancel')" onClick="() => props.close()"/>
+                    <Button className="'edit-upload__save'" ariaLabel="t('general:applyChanges')" label="t('general:applyChanges')" disabled="!state.naturalWidth" onClick="() => this.apply()"/>
+                </div>
+            </div>
+            <div class="edit-upload__toolWrap">
+                <div class="edit-upload__crop">
+                    <div class="edit-upload__focal-wrapper" t-ref="container" t-attf-style="aspect-ratio: {{state.naturalWidth || 1}} / {{state.naturalHeight || 1}}; position: relative"
+                         t-on-mousedown="onCropMouseDown">
+                        <img t-att-alt="t('upload:setFocalPoint')" t-att-src="props.src" t-on-load="onImageLoad" draggable="false" style="width: 100%; height: 100%; display: block"/>
+                        <div t-if="props.crop" class="edit-upload__crop-window"
+                             t-attf-style="position: absolute; left: {{state.crop.x}}%; top: {{state.crop.y}}%; width: {{state.crop.width}}%; height: {{state.crop.height}}%; box-shadow: 0 0 0 9999px rgba(0,0,0,.4); outline: 1px dashed #fff; pointer-events: none"/>
+                        <div t-if="props.focalPoint" t-att-class="'edit-upload__draggable-container' + (state.dragging ? ' edit-upload__draggable-container--dragging' : '')">
+                            <button type="button" class="edit-upload__draggable edit-upload__focalPoint" t-attf-style="left: {{state.focalX}}%; top: {{state.focalY}}%"
+                                    t-on-mousedown="onFocalMouseDown"><t t-out="icon('plus')"/></button>
+                            <div/>
+                        </div>
+                    </div>
+                </div>
+                <div class="edit-upload__sidebar">
+                    <div t-if="props.crop" class="edit-upload__groupWrap">
+                        <div><div class="edit-upload__titleWrap"><h3 t-esc="t('upload:crop')"/>
+                            <Button className="'edit-upload__reset'" buttonStyle="'none'" label="t('general:reset')" onClick="() => this.resetCrop()"/></div></div>
+                        <span class="edit-upload__description" t-esc="t('upload:cropToolDescription')"/>
+                        <div class="edit-upload__inputsWrap">
+                            <div class="edit-upload__input">Width (px)<input type="number" name="Width (px)" t-att-value="cropPx.width" t-on-change="(ev) => this.setCropPx('width', ev)"/></div>
+                            <div class="edit-upload__input">Height (px)<input type="number" name="Height (px)" t-att-value="cropPx.height" t-on-change="(ev) => this.setCropPx('height', ev)"/></div>
+                        </div>
+                    </div>
+                    <div t-if="props.focalPoint" class="edit-upload__groupWrap">
+                        <div><div class="edit-upload__titleWrap"><h3 t-esc="t('upload:focalPoint')"/>
+                            <Button className="'edit-upload__reset'" buttonStyle="'none'" label="t('general:reset')" onClick="() => this.resetFocal()"/></div></div>
+                        <span class="edit-upload__description" t-esc="t('upload:focalPointDescription')"/>
+                        <div class="edit-upload__inputsWrap">
+                            <div class="edit-upload__input">X %<input type="number" name="X %" t-att-value="state.focalX" t-on-change="(ev) => state.focalX = +ev.target.value"/></div>
+                            <div class="edit-upload__input">Y %<input type="number" name="Y %" t-att-value="state.focalY" t-on-change="(ev) => state.focalY = +ev.target.value"/></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+</templates>

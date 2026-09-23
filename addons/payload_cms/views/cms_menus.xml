@@ -1,45 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Menu Principal CMS de premier niveau -->
+    <!-- Payload admin embedded in the Odoo web client (navbar / apps menu stay visible) -->
+    <record id="action_payload_admin" model="ir.actions.client">
+        <field name="name">Payload CMS</field>
+        <field name="tag">payload_cms.admin</field>
+    </record>
+
+    <!-- Configuration pages rendered with the Payload UI (schema builder) -->
+    <record id="action_payload_config_collections" model="ir.actions.client">
+        <field name="name">Collections</field>
+        <field name="tag">payload_cms.admin</field>
+        <field name="params" eval="{'path': '/config/collections'}"/>
+    </record>
+    <record id="action_payload_config_globals" model="ir.actions.client">
+        <field name="name">Globals</field>
+        <field name="tag">payload_cms.admin</field>
+        <field name="params" eval="{'path': '/config/globals'}"/>
+    </record>
+    <record id="action_payload_config_fields" model="ir.actions.client">
+        <field name="name">Fields</field>
+        <field name="tag">payload_cms.admin</field>
+        <field name="params" eval="{'path': '/config/fields'}"/>
+    </record>
+
     <menuitem id="menu_payload_cms_root"
               name="CMS"
               sequence="15"
               web_icon="payload_cms,static/description/icon.png"
               groups="group_payload_cms_user"/>
 
-    <!-- Section : Contenu -->
-    <menuitem id="menu_payload_cms_content"
-              name="Contenu"
+    <menuitem id="menu_payload_cms_admin_panel"
+              name="Admin Panel"
               parent="menu_payload_cms_root"
-              sequence="10"/>
+              action="action_payload_admin"
+              sequence="1"/>
 
-    <!-- Entrée : Pages -->
-    <menuitem id="menu_payload_cms_pages"
-              name="Pages"
-              parent="menu_payload_cms_content"
-              action="action_cms_page"
-              sequence="10"/>
-
-    <!-- Section : Configuration (Admin CMS) -->
     <menuitem id="menu_payload_cms_config"
               name="Configuration"
               parent="menu_payload_cms_root"
               sequence="20"
               groups="group_payload_cms_admin"/>
 
-    <!-- Entrée : Collections -->
     <menuitem id="menu_payload_cms_collections"
               name="Collections"
               parent="menu_payload_cms_config"
-              action="action_cms_collection"
+              action="action_payload_config_collections"
               sequence="10"/>
 
-    <!-- Entrée : Définitions de Champs -->
-    <menuitem id="menu_payload_cms_fields"
-              name="Champs"
+    <menuitem id="menu_payload_cms_globals"
+              name="Globals"
               parent="menu_payload_cms_config"
-              action="action_cms_field_definition"
+              action="action_payload_config_globals"
               sequence="20"/>
+
+    <menuitem id="menu_payload_cms_fields"
+              name="Fields"
+              parent="menu_payload_cms_config"
+              action="action_payload_config_fields"
+              sequence="30"/>
 
 </odoo>

@@ -1,0 +1,9 @@
+
+@layer payload-default {
+  .icon--menu {
+    .stroke {
+      stroke-width: $style-stroke-width-s;
+      stroke: currentColor;
+    }
+  }
+}

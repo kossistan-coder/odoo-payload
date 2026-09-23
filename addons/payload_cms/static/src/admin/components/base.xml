@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="payload.ButtonContent">
+        <aside t-if="props.tooltip" t-att-class="'tooltip btn__tooltip ' + (state.showTooltip ? 'tooltip--show ' : '') + 'tooltip--caret-center tooltip--position-top'" t-att-title="props.tooltip"><div class="tooltip-content" t-esc="props.tooltip"/></aside>
+        <span class="btn__content">
+            <span t-if="props.label or props.slots?.default" class="btn__label"><t t-if="props.slots?.default"><t t-slot="default"/></t><t t-else="" t-esc="props.label"/></span>
+            <span t-if="props.icon" class="btn__icon"><t t-out="iconMarkup"/></span>
+        </span>
+    </t>
+
+    <t t-name="payload.Button">
+        <a t-if="props.href and !props.disabled" t-att-href="props.href" t-att-class="classes" t-att-id="props.id"
+           t-att-aria-label="props.ariaLabel" t-att-title="props.ariaLabel" t-att-target="props.newTab ? '_blank' : false"
+           t-att-rel="props.newTab ? 'noopener noreferrer' : false" t-on-click="onClick"
+           t-on-pointerenter="() => props.tooltip and (state.showTooltip = true)" t-on-pointerleave="() => state.showTooltip = false">
+            <t t-call="payload.ButtonContent"/>
+        </a>
+        <span t-elif="props.el === 'span'" t-att-class="classes" t-att-id="props.id" t-att-aria-disabled="props.disabled ? 'true' : 'false'">
+            <t t-call="payload.ButtonContent"/>
+        </span>
+        <button t-else="" t-att-type="props.type || 'button'" t-att-class="classes" t-att-id="props.id"
+                t-att-aria-label="props.ariaLabel" t-att-title="props.ariaLabel" t-att-disabled="props.disabled"
+                t-att-aria-disabled="props.disabled ? 'true' : 'false'" t-on-click="onClick"
+                t-on-pointerenter="() => props.tooltip and (state.showTooltip = true)" t-on-pointerleave="() => state.showTooltip = false">
+            <t t-call="payload.ButtonContent"/>
+        </button>
+    </t>
+
+    <t t-name="payload.Pill">
+        <a t-if="props.href" t-att-href="props.href" t-att-class="classes" t-att-id="props.id">
+            <span class="pill__label"><t t-if="props.slots?.default"><t t-slot="default"/></t><t t-else="" t-esc="props.label"/></span>
+            <span t-if="props.icon" class="pill__icon"><t t-out="typeof props.icon === 'string' ? icon(props.icon) : props.icon"/></span>
+        </a>
+        <button t-elif="props.onClick" type="button" t-att-class="classes" t-att-id="props.id" t-on-click="props.onClick"
+                t-att-aria-expanded="props.expanded === undefined ? false : (props.expanded ? 'true' : 'false')" t-att-aria-controls="props.controls">
+            <span class="pill__label"><t t-if="props.slots?.default"><t t-slot="default"/></t><t t-else="" t-esc="props.label"/></span>
+            <span t-if="props.icon" class="pill__icon"><t t-out="typeof props.icon === 'string' ? icon(props.icon) : props.icon"/></span>
+        </button>
+        <div t-else="" t-att-class="classes" t-att-id="props.id">
+            <span class="pill__label"><t t-if="props.slots?.default"><t t-slot="default"/></t><t t-else="" t-esc="props.label"/></span>
+            <span t-if="props.icon" class="pill__icon"><t t-out="typeof props.icon === 'string' ? icon(props.icon) : props.icon"/></span>
+        </div>
+    </t>
+
+    <t t-name="payload.Popup">
+        <div t-att-class="'popup' + (props.className ? ' ' + props.className : '')" t-att-id="props.id">
+            <div class="popup__trigger-wrap" t-ref="trigger">
+                <div t-if="props.buttonType === 'custom'" t-att-class="buttonClasses" role="button" tabindex="0" t-on-click="toggle">
+                    <t t-slot="button"/>
+                </div>
+                <button t-else="" type="button" tabindex="0" t-att-class="buttonClasses" t-att-disabled="props.disabled" t-on-click="toggle">
+                    <t t-slot="button"/>
+                </button>
+            </div>
+        </div>
+        <t t-if="state.active">
+            <t t-portal="'body'">
+                <div t-ref="content" t-att-data-popup-id="props.id"
+                     t-att-class="'popup__content popup--size-' + (props.size || 'medium') + ' popup--v-' + state.vertical + (props.portalClassName ? ' ' + props.portalClassName : '')"
+                     t-attf-style="top: {{state.top}}px; left: {{state.left}}px; --caret-left: {{state.caret}}px;"
+                     t-on-click="onContentClick">
+                    <div t-att-class="'popup__scroll-container' + (props.showScrollbar ? ' popup__scroll-container--show-scrollbar' : '')">
+                        <t t-slot="default" close="close"/>
+                    </div>
+                    <div t-if="props.caret !== false" class="popup__caret"/>
+                </div>
+            </t>
+        </t>
+    </t>
+
+    <t t-name="payload.PopupButton">
+        <a t-if="props.href" t-att-href="props.href" t-att-id="props.id"
+           t-att-class="'popup-button-list__button' + (props.active ? ' popup-button-list__button--selected' : '') + (props.className ? ' ' + props.className : '')">
+            <t t-slot="default"/>
+        </a>
+        <div t-elif="props.disabled" t-att-id="props.id" t-att-class="'popup-button-list__button popup-button-list__disabled' + (props.className ? ' ' + props.className : '')">
+            <t t-slot="default"/>
+        </div>
+        <button t-else="" type="button" t-att-id="props.id" t-on-click="props.onClick"
+                t-att-class="'popup-button-list__button' + (props.active ? ' popup-button-list__button--selected' : '') + (props.className ? ' ' + props.className : '')">
+            <t t-slot="default"/>
+        </button>
+    </t>
+
+    <t t-name="payload.Select">
+        <div t-ref="root" t-att-class="containerClasses" t-att-id="props.id">
+            <div t-att-class="'rs__control' + (props.disabled ? ' rs__control--is-disabled' : '') + ((state.isFocused or state.open) ? ' rs__control--is-focused' : '') + (state.open ? ' rs__control--menu-is-open' : '')"
+                 t-on-mousedown="onControlMouseDown">
+                <div class="value-container" t-att-title="!isMulti and hasValue ? labelOf(values[0]) : false">
+                    <div t-att-class="'rs__value-container' + (isMulti ? ' rs__value-container--is-multi' : '') + (hasValue ? ' rs__value-container--has-value' : '')">
+                        <div t-if="!hasValue and !state.input" class="rs__placeholder" t-esc="props.placeholder || t('general:selectValue')"/>
+                        <t t-if="!isMulti and hasValue and !state.input">
+                            <div t-if="props.variant === 'relationship'" class="rs__single-value relationship--single-value">
+                                <div class="relationship--single-value__label" t-att-title="labelOf(values[0])">
+                                    <div class="relationship--single-value__label-text">
+                                        <div class="relationship--single-value__text" t-esc="labelOf(values[0])"/>
+                                        <button t-if="props.onEdit" type="button" t-att-aria-label="'Edit ' + labelOf(values[0])" class="relationship--single-value__drawer-toggler"
+                                                t-on-mousedown.stop.prevent="() => props.onEdit(values[0])">
+                                            <t t-out="icon('edit')"/>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div t-else="" t-att-class="'rs__single-value react-select--single-value' + (props.disabled ? ' rs__single-value--is-disabled' : '')" t-esc="labelOf(values[0])"/>
+                        </t>
+                        <t t-if="isMulti">
+                            <t t-foreach="values" t-as="v" t-key="v_index">
+                                <div t-att-class="'rs__multi-value multi-value' + (props.disabled ? ' rs__multi-value--is-disabled' : '')">
+                                    <div t-if="props.variant === 'relationship'" class="relationship--multi-value-label" t-att-title="labelOf(v)">
+                                        <div class="relationship--multi-value-label__content">
+                                            <div class="relationship--multi-value-label__text" t-esc="labelOf(v)"/>
+                                        </div>
+                                        <button t-if="props.onEdit" type="button" t-att-aria-label="'Edit ' + labelOf(v)" class="relationship--multi-value-label__drawer-toggler"
+                                                t-on-mousedown.stop.prevent="() => props.onEdit(v)">
+                                            <t t-out="icon('edit', 'relationship--multi-value-label__icon')"/>
+                                        </button>
+                                    </div>
+                                    <div t-else="" class="multi-value-label" t-att-title="labelOf(v)"><div class="multi-value-label__text" t-esc="labelOf(v)"/></div>
+                                    <button t-if="!props.disabled" type="button" aria-label="Remove" class="multi-value-remove rs__multi-value__remove"
+                                            t-on-mousedown.stop.prevent="() => this.remove(v)">
+                                        <t t-out="icon('x', 'multi-value-remove__icon')"/>
+                                    </button>
+                                </div>
+                            </t>
+                        </t>
+                        <div class="rs__input-container" t-att-data-value="state.input">
+                            <input t-ref="input" class="rs__input" type="text" role="combobox" autocapitalize="none" autocomplete="off"
+                                   autocorrect="off" spellcheck="false" tabindex="0" aria-autocomplete="list"
+                                   t-att-aria-expanded="state.open ? 'true' : 'false'" aria-haspopup="true"
+                                   t-att-readonly="props.isSearchable === false" t-att-inputmode="props.isSearchable === false ? 'none' : false"
+                                   t-att-id="props.inputId" t-att-value="state.input" t-att-disabled="props.disabled"
+                                   t-on-input="onInput" t-on-keydown="onKeyDown"
+                                   t-on-focus="() => state.isFocused = true" t-on-blur="() => state.isFocused = false"/>
+                        </div>
+                    </div>
+                </div>
+                <div class="rs__indicators">
+                    <div t-if="props.isClearable !== false and hasValue and !props.disabled" class="clear-indicator" role="button" tabindex="0" aria-hidden="true"
+                         t-on-mousedown.stop.prevent="clear">
+                        <t t-out="icon('x', 'clear-indicator__icon')"/>
+                    </div>
+                    <div t-if="props.isLoading" class="rs__indicator rs__loading-indicator"><span/><span/><span/></div>
+                    <span class="rs__indicator-separator"/>
+                    <button t-if="props.showDropdownIndicator !== false" type="button" class="dropdown-indicator" aria-hidden="true" tabindex="-1">
+                        <t t-out="icon('chevron', 'dropdown-indicator__icon')"/>
+                    </button>
+                </div>
+            </div>
+            <div t-if="state.open" t-att-class="'rs__menu' + (state.placement === 'top' ? ' rs__menu--top' : '')">
+                <div t-att-class="'rs__menu-list' + (isMulti ? ' rs__menu-list--is-multi' : '')" role="listbox" t-on-scroll="onMenuScroll">
+                    <t t-set="opts" t-value="filteredOptions"/>
+                    <t t-foreach="opts" t-as="opt" t-key="opt_index">
+                        <div role="option" tabindex="-1" t-att-aria-selected="values.includes(opt.value) ? 'true' : 'false'"
+                             t-att-class="'rs__option' + (opt.isDisabled ? ' rs__option--is-disabled' : '') + (state.focused === opt_index ? ' rs__option--is-focused' : '') + (!isMulti and values.includes(opt.value) ? ' rs__option--is-selected' : '')"
+                             t-on-mouseenter="() => state.focused = opt_index" t-on-mousedown.prevent="() => this.select(opt)">
+                            <t t-if="opt.labelMarkup" t-out="opt.labelMarkup"/><t t-else="" t-esc="opt.label"/>
+                        </div>
+                    </t>
+                    <div t-if="!opts.length and props.isLoading" class="rs__menu-notice rs__menu-notice--loading">Loading...</div>
+                    <div t-elif="!opts.length" class="rs__menu-notice rs__menu-notice--no-options" t-esc="props.noOptionsMessage || t('general:noOptions')"/>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.CheckboxInput">
+        <div t-att-class="'checkbox-input' + (props.className ? ' ' + props.className : '') + (props.checked ? ' checkbox-input--checked' : '') + (props.readOnly ? ' checkbox-input--read-only' : '')">
+            <div class="checkbox-input__input">
+                <input type="checkbox" t-att-id="props.id || uid" t-att-name="props.name" t-att-aria-label="props.ariaLabel || ''"
+                       t-att-checked="props.checked" t-att-disabled="props.readOnly" t-on-change="onChange"/>
+                <span t-att-class="'checkbox-input__icon ' + (!props.checked and props.partialChecked ? 'partial' : 'check')">
+                    <t t-if="props.checked" t-out="icon('check')"/>
+                    <t t-elif="props.partialChecked" t-out="icon('line')"/>
+                </span>
+            </div>
+            <label t-if="props.label" class="field-label" t-att-for="props.id || uid">
+                <t t-esc="props.label"/><span t-if="props.required" class="required">*</span>
+            </label>
+        </div>
+    </t>
+
+    <t t-name="payload.Thumbnail">
+        <div t-att-class="'thumbnail thumbnail--size-' + (props.size || 'medium') + ' ' + (props.className || '')">
+            <img t-if="props.src and !state.error" t-att-alt="props.alt || ''" t-att-src="props.src" t-on-error="() => state.error = true"/>
+            <t t-else="" t-out="icon('graphic-file')"/>
+        </div>
+    </t>
+
+    <t t-name="payload.AnimateHeight">
+        <div t-att-aria-hidden="props.open ? 'false' : 'true'" t-att-id="props.id"
+             t-att-class="(props.className ? props.className + ' ' : '') + 'rah-static' + (props.open ? ' rah-static--height-auto' : '')"
+             t-attf-style="overflow: {{props.open ? '' : 'hidden'}}; transition: height {{props.duration ?? 300}}ms ease;">
+            <div t-att-style="props.open ? '' : 'display:none'"><t t-slot="default"/></div>
+        </div>
+    </t>
+
+    <t t-name="payload.FieldError">
+        <aside t-if="props.message" t-att-class="'tooltip field-error tooltip--show tooltip--caret-' + (props.alignCaret || 'right') + ' tooltip--position-top'" t-att-title="props.message">
+            <div class="tooltip-content" t-esc="props.message"/>
+        </aside>
+    </t>
+
+    <t t-name="payload.ShimmerEffect">
+        <div t-att-class="'shimmer-effect' + (props.transparent ? ' shimmer-effect--transparent' : '')" t-attf-style="height: {{props.height || '60px'}}; width: {{props.width || '100%'}};">
+            <div class="shimmer-effect__shine" style="animation-delay: 0ms"/>
+        </div>
+    </t>
+
+    <t t-name="payload.Banner">
+        <div t-att-class="'banner banner--type-' + (props.type || 'default') + (props.className ? ' ' + props.className : '')">
+            <span class="banner__content"><t t-slot="default"/></span>
+        </div>
+    </t>
+
+</templates>

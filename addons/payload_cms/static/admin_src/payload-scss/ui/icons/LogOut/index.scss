@@ -1,0 +1,12 @@
+
+@layer payload-default {
+  .icon--logout {
+    height: $baseline;
+    width: $baseline;
+
+    .stroke {
+      stroke: currentColor;
+      stroke-width: 2px;
+    }
+  }
+}

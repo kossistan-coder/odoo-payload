@@ -1,62 +1,117 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Vue Liste pour les Collections -->
-    <record id="view_cms_collection_tree" model="ir.ui.view">
+    <record id="view_cms_collection_list" model="ir.ui.view">
         <field name="name">cms.collection.list</field>
         <field name="model">cms.collection</field>
         <field name="arch" type="xml">
             <list string="Collections">
-                <field name="label" string="Nom affiché"/>
-                <field name="name" string="Nom technique (slug)"/>
-                <field name="icon" string="Icône"/>
-                <field name="field_count" string="Nb de champs"/>
-                <field name="active" widget="boolean_toggle"/>
+                <field name="sequence" widget="handle"/>
+                <field name="label"/>
+                <field name="slug"/>
+                <field name="kind" optional="hide"/>
+                <field name="admin_group" optional="show"/>
+                <field name="drafts" widget="boolean_toggle"/>
+                <field name="upload" widget="boolean_toggle"/>
+                <field name="live_preview" widget="boolean_toggle"/>
+                <field name="public_read" widget="boolean_toggle"/>
+                <field name="field_count" string="Fields"/>
             </list>
         </field>
     </record>
 
-    <!-- Vue Formulaire pour les Collections -->
     <record id="view_cms_collection_form" model="ir.ui.view">
         <field name="name">cms.collection.form</field>
         <field name="model">cms.collection</field>
         <field name="arch" type="xml">
-            <form string="Configuration de Collection">
+            <form string="Collection">
+                <header>
+                    <button name="action_open_documents" type="object" string="Open in Admin Panel" class="btn-primary"/>
+                </header>
                 <sheet>
-                    <widget name="web_ribbon" title="Archivé" bg_color="text-bg-danger" invisible="active"/>
-                    <div class="oe_title">
-                        <label for="label" string="Nom affiché (Label)"/>
-                        <h1>
-                            <field name="label" placeholder="ex: Articles de blog"/>
-                        </h1>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_documents" type="object" class="oe_stat_button" icon="fa-files-o">
+                            <field name="document_count" widget="statinfo" string="Documents"/>
+                        </button>
                     </div>
-
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <label for="label"/>
+                        <h1><field name="label" placeholder="e.g. Posts"/></h1>
+                    </div>
                     <group>
                         <group>
-                            <field name="name" placeholder="ex: posts"/>
-                            <field name="icon" placeholder="ex: fa-newspaper-o"/>
+                            <field name="kind" widget="radio" options="{'horizontal': true}"/>
+                            <field name="slug" placeholder="e.g. posts"/>
+                            <field name="label_singular" placeholder="e.g. Post" invisible="kind == 'global'"/>
+                            <field name="admin_group" placeholder="Collections"/>
+                            <field name="active" invisible="1"/>
                         </group>
                         <group>
-                            <field name="active"/>
+                            <field name="use_as_title" invisible="kind == 'global'"/>
+                            <field name="default_columns" placeholder="title,slug,updatedAt,_status" invisible="kind == 'global'"/>
+                            <field name="list_searchable_fields" placeholder="title,slug" invisible="kind == 'global'"/>
+                            <field name="default_sort" invisible="kind == 'global'"/>
+                            <field name="default_limit" invisible="kind == 'global'"/>
                         </group>
                     </group>
-
-                    <group string="Description fonctionnelle">
-                        <field name="description" nolabel="1" placeholder="Description de l'usage de cette collection..."/>
-                    </group>
-
+                    <field name="description" placeholder="Description shown in the admin list view..."/>
                     <notebook>
-                        <page string="Champs déclarés (Payload Schema)">
-                            <field name="field_ids">
-                                <list editable="bottom">
+                        <page string="Fields" name="fields">
+                            <field name="field_ids" context="{'default_collection_id': id}">
+                                <list>
                                     <field name="sequence" widget="handle"/>
-                                    <field name="name" placeholder="nom_technique"/>
-                                    <field name="label" placeholder="Libellé du champ"/>
+                                    <field name="name"/>
+                                    <field name="label"/>
                                     <field name="field_type"/>
                                     <field name="required"/>
-                                    <field name="localized"/>
+                                    <field name="position"/>
+                                    <field name="relation_to_id" optional="show"/>
+                                    <field name="child_ids" string="Sub fields" widget="many2many_tags" optional="show"/>
                                 </list>
                             </field>
+                        </page>
+                        <page string="Versions &amp; Drafts" name="versions">
+                            <group>
+                                <group>
+                                    <field name="versions"/>
+                                    <field name="drafts"/>
+                                    <field name="autosave" invisible="not drafts"/>
+                                    <field name="autosave_interval" invisible="not autosave"/>
+                                    <field name="max_versions"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Upload" name="upload" invisible="kind == 'global'">
+                            <group>
+                                <group>
+                                    <field name="upload"/>
+                                    <field name="upload_mime_types" invisible="not upload"/>
+                                    <field name="focal_point" invisible="not upload"/>
+                                    <field name="crop" invisible="not upload"/>
+                                </group>
+                                <group invisible="not upload">
+                                    <field name="image_sizes" widget="text" placeholder='[{"name": "thumbnail", "width": 400, "height": 300}]'/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Preview" name="preview">
+                            <group>
+                                <group>
+                                    <field name="preview_url" placeholder="https://my-site.com/{slug}"/>
+                                    <field name="live_preview"/>
+                                    <field name="live_preview_url" invisible="not live_preview" placeholder="http://localhost:3000/{slug}?preview=true"/>
+                                </group>
+                                <group invisible="not live_preview">
+                                    <field name="live_preview_breakpoints" widget="text"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Access" name="access">
+                            <group>
+                                <field name="public_read"/>
+                                <field name="hidden"/>
+                            </group>
                         </page>
                     </notebook>
                 </sheet>
@@ -65,19 +120,42 @@
         </field>
     </record>
 
-    <!-- Action pour ouvrir les Collections -->
+    <record id="view_cms_collection_search" model="ir.ui.view">
+        <field name="name">cms.collection.search</field>
+        <field name="model">cms.collection</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="label"/>
+                <field name="slug"/>
+                <filter name="collections" string="Collections" domain="[('kind', '=', 'collection')]"/>
+                <filter name="globals" string="Globals" domain="[('kind', '=', 'global')]"/>
+                <separator/>
+                <filter name="archived" string="Archived" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_kind" string="Type" context="{'group_by': 'kind'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
     <record id="action_cms_collection" model="ir.actions.act_window">
         <field name="name">Collections</field>
         <field name="res_model">cms.collection</field>
         <field name="view_mode">list,form</field>
+        <field name="domain">[('kind', '=', 'collection')]</field>
+        <field name="context">{'default_kind': 'collection'}</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Définissez une nouvelle collection de contenu !
-            </p>
-            <p>
-                Configurez les métadonnées et la liste des champs typés de votre schéma de données façon Payload CMS.
-            </p>
+            <p class="o_view_nocontent_smiling_face">Declare your first collection</p>
+            <p>Collections are groups of documents sharing the same schema (like Payload's CollectionConfig).</p>
         </field>
+    </record>
+
+    <record id="action_cms_global" model="ir.actions.act_window">
+        <field name="name">Globals</field>
+        <field name="res_model">cms.collection</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('kind', '=', 'global')]</field>
+        <field name="context">{'default_kind': 'global', 'default_versions': False}</field>
     </record>
 
 </odoo>

@@ -1,0 +1,16 @@
+
+@layer payload-default {
+  .group-by-header {
+    display: flex;
+    gap: var(--base);
+
+    &__heading {
+      margin: 0;
+      flex-grow: 1;
+    }
+
+    .list-selection__actions button {
+      margin: 0;
+    }
+  }
+}

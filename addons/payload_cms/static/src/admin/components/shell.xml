@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="payload.NavGroup">
+        <div t-att-class="'nav-group ' + props.label + (state.collapsed ? ' nav-group--collapsed' : '')" t-att-id="'nav-group-' + props.label">
+            <button type="button" t-att-tabindex="props.navOpen ? 0 : -1"
+                    t-att-class="'nav-group__toggle nav-group__toggle--' + (state.collapsed ? 'collapsed' : 'open')" t-on-click="toggle">
+                <div class="nav-group__label" t-esc="props.label"/>
+                <div class="nav-group__indicator">
+                    <t t-out="icon(state.collapsed ? 'chevron' : 'chevron--up', 'nav-group__indicator')"/>
+                </div>
+            </button>
+            <AnimateHeight open="!state.collapsed" duration="200">
+                <div class="nav-group__content">
+                    <t t-foreach="props.entities" t-as="entity" t-key="entity.href">
+                        <div t-if="isExact(entity.href)" class="nav__link" t-att-id="(entity.type === 'global' ? 'nav-global-' : 'nav-') + entity.slug">
+                            <div class="nav__link-indicator"/>
+                            <span class="nav__link-label" t-esc="entity.label"/>
+                        </div>
+                        <a t-else="" class="nav__link" t-att-href="entity.href" t-att-id="(entity.type === 'global' ? 'nav-global-' : 'nav-') + entity.slug">
+                            <div t-if="isActive(entity.href)" class="nav__link-indicator"/>
+                            <span class="nav__link-label" t-esc="entity.label"/>
+                        </a>
+                    </t>
+                </div>
+            </AnimateHeight>
+        </div>
+    </t>
+
+    <t t-name="payload.Nav">
+        <aside t-att-class="'nav' + (store.navOpen ? ' nav--nav-open' : '') + (props.animate ? ' nav--nav-animate' : '') + (props.hydrated ? ' nav--nav-hydrated' : '')"
+               t-att-inert="!store.navOpen">
+            <div class="nav__scroll">
+ <nav class="nav__wrap">
+                    <TenantSelector/>
+                    <t t-foreach="groups" t-as="group" t-key="group.label">
+                        <NavGroup label="group.label" entities="group.entities" navOpen="store.navOpen"/>
+                    </t>
+                    <div class="nav__controls">
+                        <a t-if="!embedded" class="nav__odoo-link" href="/odoo" data-external="1" title="Back to Odoo">← Odoo</a>
+                        <a aria-label="Log out" class="nav__log-out" href="/admin/logout" tabindex="0" title="Log out">
+                            <t t-out="icon('logout')"/>
+                        </a>
+                    </div>
+                </nav>
+                <div class="nav__header">
+                    <div class="nav__header-content">
+                        <button class="nav__mobile-close" type="button" t-att-tabindex="store.navOpen ? 0 : -1" t-on-click="closeNav">
+                            <div class="hamburger"><div aria-label="Close" class="hamburger__close-icon" title="Close"><t t-out="icon('close-menu')"/></div></div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </t>
+
+    <t t-name="payload.StepNav">
+ <nav t-if="store.stepNav.length" class="step-nav app-header__step-nav">
+            <button t-if="showBack" type="button" class="step-nav__back" title="Back" aria-label="Back" t-on-click="back"><t t-out="icon('arrow-left')"/></button>
+            <a class="step-nav__home" href="/admin" tabindex="0"><span title="Dashboard"><t t-out="icon('graphic-icon')"/></span></a>
+            <span>/</span>
+            <t t-foreach="store.stepNav" t-as="item" t-key="item_index">
+                <span t-if="item_last" class="step-nav__last" t-esc="item.label"/>
+                <t t-else="">
+                    <a t-if="item.url" t-att-href="item.url"><span t-esc="item.label"/></a>
+                    <span t-else="" t-esc="item.label"/>
+                    <span>/</span>
+                </t>
+            </t>
+        </nav>
+        <div t-else="" class="step-nav app-header__step-nav">
+            <button t-if="showBack" type="button" class="step-nav__back" title="Back" aria-label="Back" t-on-click="back"><t t-out="icon('arrow-left')"/></button>
+            <div class="step-nav__home"><span title="Dashboard"><t t-out="icon('graphic-icon')"/></span></div>
+        </div>
+    </t>
+
+    <t t-name="payload.AppHeader">
+        <header t-att-class="'app-header' + (store.navOpen ? ' app-header--nav-open' : '')">
+            <div class="app-header__bg"/>
+            <div class="app-header__content">
+                <div class="app-header__wrapper">
+                    <button type="button" tabindex="-1" t-att-aria-label="(store.navOpen ? 'Close' : 'Open') + ' Menu'"
+                            t-att-class="'nav-toggler' + (store.navOpen ? ' nav-toggler--is-open' : '') + ' app-header__mobile-nav-toggler'" t-on-click="toggleNav">
+                        <div class="hamburger"><div aria-label="Open" class="hamburger__open-icon" title="Open"><t t-out="icon('menu')"/></div></div>
+                    </button>
+                    <div class="app-header__controls-wrapper">
+                        <div class="app-header__step-nav-wrapper">
+                            <StepNav/>
+                        </div>
+                        <div class="app-header__actions-wrapper">
+                            <div class="app-header__actions"/>
+                            <div t-if="hasLocalizer" class="localizer-button app-header__localizer-spacing" aria-hidden="true">
+                                <div class="localizer-button__label" t-esc="localePrefix"/>
+                                <div class="localizer-button__current"><span class="localizer-button__current-label" t-esc="currentLocaleLabel"/><span class="localizer-button__chevron"><t t-out="icon('chevron')"/></span></div>
+                            </div>
+                        </div>
+                        <a aria-label="Account" class="app-header__account" href="/admin/account" tabindex="0">
+                            <img t-if="gravatar" alt="yas" class="gravatar-account" height="25" width="25" style="border-radius: 50%" t-att-src="gravatar"/>
+                            <t t-else="" t-out="icon('graphic-account')"/>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <Localizer t-if="hasLocalizer"/>
+        </header>
+    </t>
+
+    <t t-name="payload.TenantSelector">
+        <div t-if="visible" class="tenant-selector">
+            <div class="field-type select">
+                <label class="field-label">Site</label>
+                <Select value="value" options="options" isClearable="false" onChange="(v) => this.onChange(v)"/>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.Localizer">
+        <div class="localizer app-header__localizer">
+            <Popup horizontalAlign="'right'" size="'large'" showScrollbar="true" buttonType="'custom'" noBackground="true">
+                <t t-set-slot="button">
+                    <div t-att-aria-label="t('general:locale')" class="localizer-button">
+                        <div class="localizer-button__label" t-esc="localePrefix"/>
+                        <div class="localizer-button__current">
+                            <span class="localizer-button__current-label" t-esc="current ? (current.label || current.code) : ''"/>
+                            <span class="localizer-button__chevron"><t t-out="icon('chevron')"/></span>
+                        </div>
+                    </div>
+                </t>
+                <t t-set-slot="default" t-slot-scope="scope">
+                    <div class="popup-button-list popup-button-list__text-align--left popup-button-list__button-size--default">
+                        <t t-foreach="locales" t-as="locale" t-key="locale.code">
+                            <PopupButton active="current and current.code === locale.code" onClick="() => this.select(locale, scope.close)">
+                                <t t-esc="optionLabel(locale)"/>
+                            </PopupButton>
+                        </t>
+                    </div>
+                </t>
+            </Popup>
+        </div>
+    </t>
+
+    <t t-name="payload.DefaultTemplate">
+        <div style="position: relative">
+            <div class="template-default__nav-toggler-wrapper" id="nav-toggler">
+                <div class="template-default__nav-toggler-container">
+                    <button type="button" tabindex="0" t-att-aria-label="(store.navOpen ? 'Close' : 'Open') + ' Menu'"
+                            t-att-class="'nav-toggler' + (store.navOpen ? ' nav-toggler--is-open' : '') + ' template-default__nav-toggler'" t-on-click="toggleNav">
+                        <div class="hamburger">
+                            <div t-if="!store.navOpen" aria-label="Open" class="hamburger__open-icon" title="Open"><t t-out="icon('menu')"/></div>
+                            <div t-else="" aria-label="Collapse" class="hamburger__close-icon" title="Collapse"><t t-out="icon('chevron--left')"/></div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+            <div t-att-class="'template-default ' + (props.className || '') + (store.navOpen ? ' template-default--nav-open' : '') + (state.animate ? ' template-default--nav-animate' : '') + (state.hydrated ? ' template-default--nav-hydrated' : '')">
+                <Nav animate="state.animate" hydrated="state.hydrated"/>
+                <div class="template-default__wrap">
+                    <AppHeader/>
+                    <t t-slot="default"/>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.Toaster">
+        <section aria-label="Notifications alt+T" tabindex="-1" aria-live="polite" aria-relevant="additions text" aria-atomic="false">
+            <ol t-if="store.toasts.length" dir="ltr" tabindex="-1" class="payload-toast-container" data-sonner-toaster="true" data-theme="light"
+                data-y-position="bottom" data-x-position="right" t-att-data-lifted="state.expanded and store.toasts.length > 1 ? 'true' : 'false'"
+                style="--front-toast-height: 52px; --width: 356px; --gap: 8px; --offset-top: calc(var(--gutter-h) / 2); --offset-right: calc(var(--gutter-h) / 2); --offset-bottom: calc(var(--gutter-h) / 2); --offset-left: calc(var(--gutter-h) / 2); --mobile-offset-top: 16px; --mobile-offset-right: 16px; --mobile-offset-bottom: 16px; --mobile-offset-left: 16px;"
+                t-on-mouseenter="() => state.expanded = true" t-on-mouseleave="() => state.expanded = false">
+                <t t-foreach="store.toasts" t-as="toast" t-key="toast.id">
+                    <li tabindex="0" t-att-class="'payload-toast-item toast-' + toast.type" data-sonner-toast="" data-rich-colors="false" data-styled="false"
+                        data-mounted="true" data-promise="false" data-swiped="false" t-att-data-removed="toast.removed ? 'true' : 'false'" data-visible="true"
+                        data-y-position="bottom" data-x-position="right" t-att-data-index="toast_index" t-att-data-front="toast_index === 0 ? 'true' : 'false'"
+                        data-swiping="false" data-dismissible="true" t-att-data-type="toast.type" data-invert="false" data-swipe-out="false"
+                        t-att-data-expanded="state.expanded ? 'true' : 'false'" t-att-style="toastStyle(toast_index)">
+                        <button aria-label="Close toast" data-disabled="false" data-close-button="true" class="payload-toast-close-button" t-on-click="() => this.dismiss(toast.id)">
+                            <t t-out="icon('sonner-close-button-x')"/>
+                        </button>
+                        <div data-icon="" class="toast-icon"><t t-out="icon('toast-icon-' + toast.type)"/></div>
+                        <div data-content="" class="toast-content">
+                            <div data-title="" class="toast-title" t-esc="toast.message"/>
+                            <div t-if="toast.description" data-description="" t-esc="toast.description"/>
+                        </div>
+                    </li>
+                </t>
+            </ol>
+        </section>
+    </t>
+
+    <t t-name="payload.ModalContainer">
+        <div t-att-class="'payload__modal-container' + (store.modals.length ? ' payload__modal-container--enterDone' : '')">
+            <t t-foreach="store.modals" t-as="modal" t-key="modal.id">
+                <dialog t-if="modal.kind === 'confirm'" open="" aria-modal="true"
+                        t-att-class="'payload__modal-item payload__modal-item--slug-confirm-' + modal.id + ' confirmation-modal ' + (modal.props.className || '') + ' payload__modal-item--enterDone'"
+                        t-attf-style="z-index: {{100 + modal_index}}">
+                    <div class="confirmation-modal__wrapper">
+                        <div class="confirmation-modal__content">
+                            <h1 t-esc="modal.props.heading"/>
+                            <t t-if="modal.props.bodyMarkup" t-out="modal.props.bodyMarkup"/>
+                            <p t-elif="modal.props.body" t-esc="modal.props.body"/>
+                        </div>
+                        <div class="confirmation-modal__controls">
+                            <Button id="'confirm-cancel'" buttonStyle="'secondary'" size="'large'" disabled="state.confirming === modal.id"
+                                    label="modal.props.cancelLabel || t('general:cancel')" onClick="() => modal.resolve(false)"/>
+                            <Button id="'confirm-action'" buttonStyle="'primary'" size="'large'"
+                                    label="state.confirming === modal.id ? (modal.props.confirmingLabel || 'Loading...') : (modal.props.confirmLabel || t('general:confirm'))"
+                                    onClick="() => this.confirm(modal)"/>
+                        </div>
+                    </div>
+                </dialog>
+                <dialog t-else="" open="" aria-modal="true"
+                        t-att-class="'payload__modal-item payload__modal-item--slug-drawer-' + modal.id + ' ' + (modal.className || '') + ' drawer' + (modal.animateIn ? ' drawer--is-open' : '') + (modal.depth > 1 ? ' drawer--nested' : '') + ' payload__modal-item--enterDone'"
+                        t-attf-style="z-index: {{100 + modal_index}}">
+                    <div t-if="modal.depth &lt;= 1" class="drawer__blur-bg"/>
+                    <button aria-label="Close" class="drawer__close" type="button" t-on-click="() => modal.resolve()"/>
+                    <div class="drawer__content" t-attf-style="width: calc(100% - ({{modal.depth}} * var(--gutter-h)))">
+                        <div class="drawer__blur-bg-content"/>
+                        <div t-att-class="'gutter' + (modal.gutter === false ? '' : ' gutter--left gutter--right') + ' drawer__content-children'">
+                            <div t-if="modal.header" class="drawer__header">
+                                <h2 class="drawer__header__title" t-att-title="modal.title" t-esc="modal.title"/>
+                                <button aria-label="Close" class="drawer__header__close" type="button" t-on-click="() => modal.resolve()">
+                                    <t t-out="icon('x')"/>
+                                </button>
+                            </div>
+                            <t t-component="modal.Component" t-props="modal.props" close="modal.resolve" drawerDepth="modal.depth"/>
+                        </div>
+                    </div>
+                </dialog>
+            </t>
+        </div>
+    </t>
+
+    <t t-name="payload.LoginView">
+        <section class="login template-minimal template-minimal--width-normal">
+            <div class="template-minimal__wrap">
+                <div class="login__brand"><t t-out="icon('graphic-logo')"/></div>
+                <form class="login__form form" novalidate="" data-form-ready="true" t-on-submit="onSubmit">
+                    <div class="login__form__inputWrap">
+                        <div t-att-class="'field-type email' + (state.errors.email ? ' error' : '')" style="flex: 1 1 auto">
+                            <label class="field-label" for="field-email">Email<span class="required">*</span></label>
+                            <div class="field-type__wrap">
+                                <FieldError message="state.errors.email"/>
+                                <input autocomplete="email" id="field-email" name="email" type="email" required="" t-model="state.email"/>
+                            </div>
+                        </div>
+                        <div t-att-class="'field-type password' + (state.errors.password ? ' error' : '')">
+                            <label class="field-label" for="field-password">Password<span class="required">*</span></label>
+                            <div class="field-type__wrap">
+                                <FieldError message="state.errors.password"/>
+                                <div>
+                                    <input aria-label="Password" id="field-password" name="password" type="password" t-model="state.password"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="/web/reset_password" data-external="1" t-esc="t('authentication:forgotPasswordQuestion')"/>
+                    <div class="form-submit">
+                        <Button type="'submit'" size="'large'" label="t('authentication:login')" disabled="state.loading"/>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </t>
+
+    <t t-name="payload.LogoutView">
+        <section class="template-minimal template-minimal--width-normal">
+            <div class="template-minimal__wrap">
+                <div class="logout">
+                    <div class="loading-overlay loading-overlay--entering" style="animation-duration: 0ms">
+                        <div class="loading-overlay__bars">
+                            <div class="loading-overlay__bar"/><div class="loading-overlay__bar"/><div class="loading-overlay__bar"/><div class="loading-overlay__bar"/><div class="loading-overlay__bar"/>
+                        </div>
+                        <span class="loading-overlay__text" t-esc="t('authentication:loggingOut')"/>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </t>
+
+</templates>

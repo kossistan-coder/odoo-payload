@@ -1,0 +1,9 @@
+
+@layer payload-default {
+  .icon--x {
+    .stroke {
+      stroke: currentColor;
+      stroke-width: $style-stroke-width-s;
+    }
+  }
+}

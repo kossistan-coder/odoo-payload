@@ -1,0 +1,516 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="payload.FieldLabel">
+        <label t-if="label" class="field-label" t-att-for="pathId"><t t-esc="label"/><span t-if="field.required" class="required">*</span><span t-if="localeSuffix" class="localized" t-esc="localeSuffix"/></label>
+    </t>
+
+    <t t-name="payload.FieldDescription">
+        <div t-if="admin.description" t-att-class="'field-description field-description-' + props.path.replaceAll('.', '__')" t-esc="admin.description"/>
+    </t>
+
+    <t t-name="payload.RenderFields">
+        <div t-att-class="classes">
+            <t t-foreach="fields" t-as="field" t-key="(field.name || field.type) + '_' + field_index">
+                <t t-component="componentFor(field)" field="field" data="props.data" path="childPath(field)" readOnly="props.readOnly"/>
+            </t>
+        </div>
+    </t>
+
+    <t t-name="payload.TextField">
+        <div t-att-class="'field-type text' + (admin.className ? ' ' + admin.className : '') + (error ? ' error' : '') + (readOnly ? ' read-only' : '')" t-att-style="fieldStyle">
+            <t t-call="payload.FieldLabel"/>
+            <div class="field-type__wrap">
+                <FieldError message="error"/>
+                <input data-rtl="false" t-att-id="pathId" t-att-name="props.path" type="text" t-att-placeholder="admin.placeholder"
+                       t-att-value="value ?? ''" t-att-disabled="readOnly" t-on-input="onInput"/>
+                <t t-call="payload.FieldDescription"/>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.EmailField">
+        <div t-att-class="'field-type email' + (admin.className ? ' ' + admin.className : '') + (error ? ' error' : '') + (readOnly ? ' read-only' : '')" t-att-style="fieldStyle">
+            <t t-call="payload.FieldLabel"/>
+            <div class="field-type__wrap">
+                <FieldError message="error"/>
+                <input autocomplete="email" t-att-id="pathId" t-att-name="props.path" type="email" t-att-placeholder="admin.placeholder"
+                       t-att-value="value ?? ''" t-att-disabled="readOnly" t-on-input="onInput"/>
+            </div>
+            <t t-call="payload.FieldDescription"/>
+        </div>
+    </t>
+
+    <t t-name="payload.PasswordField">
+        <div t-att-class="'field-type password' + (error ? ' error' : '') + (readOnly ? ' read-only' : '')" t-att-style="fieldStyle">
+            <t t-call="payload.FieldLabel"/>
+            <div class="field-type__wrap">
+                <FieldError message="error"/>
+                <div>
+                    <input t-att-aria-label="label" autocomplete="off" data-rtl="false" t-att-id="pathId" t-att-name="props.path" type="password"
+                           t-att-value="value ?? ''" t-att-disabled="readOnly" t-on-input="onInput"/>
+                </div>
+                <t t-call="payload.FieldDescription"/>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.TextareaField">
+        <div t-att-class="'field-type textarea' + (admin.className ? ' ' + admin.className : '') + (error ? ' error' : '') + (readOnly ? ' read-only' : '')" t-att-style="fieldStyle">
+            <t t-call="payload.FieldLabel"/>
+            <div class="field-type__wrap">
+                <FieldError message="error"/>
+                <div class="textarea-outer">
+                    <textarea data-rtl="false" t-att-id="pathId" t-att-name="props.path" t-att-placeholder="admin.placeholder"
+                              t-att-rows="admin.rows || 2" t-attf-style="--rows: {{admin.rows || 2}}" t-att-disabled="readOnly"
+                              t-att-value="value ?? ''" t-on-input="onInput"/>
+                </div>
+                <t t-call="payload.FieldDescription"/>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.NumberField">
+        <div t-att-class="'field-type number' + (admin.className ? ' ' + admin.className : '') + (error ? ' error' : '') + (readOnly ? ' read-only' : '')" t-att-style="fieldStyle">
+            <t t-call="payload.FieldLabel"/>
+            <div class="field-type__wrap">
+                <FieldError message="error"/>
+                <div>
+                    <input t-att-id="pathId" t-att-name="props.path" type="number" t-att-min="field.min" t-att-max="field.max" t-att-step="admin.step || 1"
+                           t-att-placeholder="admin.placeholder" t-att-value="value ?? ''" t-att-disabled="readOnly" t-on-input="onInput"
+                           t-on-wheel="(ev) => ev.target.blur()"/>
+                </div>
+                <t t-call="payload.FieldDescription"/>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.CheckboxField">
+        <div t-att-class="'field-type checkbox' + (error ? ' error' : '') + (value ? ' checkbox--checked' : '') + (readOnly ? ' checkbox--read-only' : '')" t-att-style="fieldStyle">
+            <FieldError message="error" alignCaret="'left'"/>
+            <CheckboxInput id="pathId" name="props.path" checked="!!value" readOnly="readOnly" label="label" required="field.required"
+                           onToggle="(checked) => this.setValue(checked)"/>
+            <t t-call="payload.FieldDescription"/>
+        </div>
+    </t>
+
+    <t t-name="payload.RadioField">
+        <div t-att-class="'field-type radio-group radio-group--layout-' + (admin.layout || 'horizontal') + (error ? ' error' : '') + (readOnly ? ' radio-group--read-only' : '')" t-att-style="fieldStyle">
+            <FieldError message="error"/>
+            <t t-call="payload.FieldLabel"/>
+            <div class="field-type__wrap">
+                <ul class="radio-group--group" t-att-id="pathId">
+                    <t t-foreach="options" t-as="opt" t-key="opt.value">
+                        <li>
+                            <label t-att-for="pathId + '-' + opt.value">
+                                <div t-att-class="'radio-input' + (value === opt.value ? ' radio-input--is-selected' : '')">
+                                    <input type="radio" t-att-id="pathId + '-' + opt.value" t-att-name="props.path" t-att-checked="value === opt.value"
+                                           t-att-disabled="readOnly" t-on-change="() => this.setValue(opt.value)"/>
+                                    <span t-att-class="'radio-input__styled-radio' + (readOnly ? ' radio-input__styled-radio--disabled' : '')"/>
+                                    <span class="radio-input__label" t-esc="opt.label"/>
+                                </div>
+                            </label>
+                        </li>
+                    </t>
+                </ul>
+                <t t-call="payload.FieldDescription"/>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.SelectField">
+        <div t-att-class="'field-type select' + (error ? ' error' : '') + (readOnly ? ' read-only' : '')" t-att-id="pathId" t-att-style="fieldStyle">
+            <t t-call="payload.FieldLabel"/>
+            <div class="field-type__wrap">
+                <FieldError message="error"/>
+                <Select className="pathId" options="options" value="value" isMulti="field.hasMany" isClearable="admin.isClearable !== false"
+                        disabled="readOnly" showError="!!error" placeholder="admin.placeholder"
+                        onChange="(v) => this.setValue(v)"/>
+            </div>
+            <t t-call="payload.FieldDescription"/>
+        </div>
+    </t>
+
+    <t t-name="payload.DateField">
+        <div t-att-class="'field-type date-time-field' + (error ? ' date-time-field--has-error' : '') + (readOnly ? ' read-only' : '')" t-att-style="fieldStyle">
+            <t t-call="payload.FieldLabel"/>
+            <div class="field-type__wrap" t-att-id="pathId">
+                <FieldError message="error"/>
+                <div t-att-class="'date-time-picker date-time-picker__appearance--' + appearance">
+                    <div class="date-time-picker__icon-wrap">
+                        <button t-if="value and !readOnly" type="button" class="date-time-picker__clear-button" t-on-click="clear"><t t-out="icon('x')"/></button>
+                        <t t-out="icon('calendar')"/>
+                    </div>
+                    <div class="date-time-picker__input-wrapper">
+                        <div class="react-datepicker-wrapper">
+                            <div class="react-datepicker__input-container">
+                                <input t-att-type="inputType" t-att-value="inputValue" t-att-disabled="readOnly" t-on-change="onChange"
+                                       t-att-placeholder="admin.placeholder"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <t t-call="payload.FieldDescription"/>
+        </div>
+    </t>
+
+    <t t-name="payload.CodeField">
+        <div t-att-class="'field-type ' + (isJson ? 'json-field' : 'code-field') + ((error or state.jsonError) ? ' error' : '') + (readOnly ? ' read-only' : '')" t-att-style="fieldStyle">
+            <t t-call="payload.FieldLabel"/>
+            <div class="field-type__wrap">
+                <FieldError message="state.jsonError || error"/>
+                <section t-att-id="pathId" style="display: flex; position: relative; text-align: initial; width: 100%">
+                    <div t-att-class="'code-editor language--' + (isJson ? 'json' : (admin.language || 'javascript')) + (readOnly ? ' read-only' : '')" style="width: 100%">
+                        <textarea spellcheck="false" t-att-rows="rows" t-att-disabled="readOnly" t-att-value="text" t-on-input="onInput"/>
+                    </div>
+                </section>
+            </div>
+            <t t-call="payload.FieldDescription"/>
+        </div>
+    </t>
+
+    <t t-name="payload.SlugField">
+        <div class="field-type slug-field-component" t-att-style="fieldStyle">
+            <div class="label-wrapper">
+                <label class="field-label" t-att-for="pathId" t-esc="label"/>
+            </div>
+            <div t-att-class="'field-type text' + (error ? ' error' : '') + ((readOnly or state.locked) ? ' read-only' : '')">
+                <div class="field-type__wrap">
+                    <FieldError message="error"/>
+                    <input data-rtl="false" t-att-id="pathId" t-att-name="props.path" type="text" t-att-value="value ?? ''"
+                           t-att-disabled="readOnly or state.locked" t-on-input="onInput"/>
+                    <div t-if="!readOnly" class="slug-field-component__actions">
+                        <Button t-if="!state.locked" id="pathId + '-generate'" className="'lock-button'" buttonStyle="'none'"
+                                label="t('authentication:generate')" onClick="() => this.generate()"/>
+                        <Button id="pathId + '-lock'" className="'lock-button'" buttonStyle="'none'"
+                                label="state.locked ? t('general:unlock') : t('general:lock')" onClick="() => this.toggleLock()"/>
+                    </div>
+                </div>
+            </div>
+            <t t-call="payload.FieldDescription"/>
+        </div>
+    </t>
+
+    <t t-name="payload.RelationshipField">
+        <div t-att-class="'field-type relationship' + (error ? ' error' : '') + (readOnly ? ' relationship--read-only' : ' relationship--allow-create')" t-att-id="pathId" t-att-style="fieldStyle">
+            <t t-call="payload.FieldLabel"/>
+            <div class="field-type__wrap">
+                <FieldError message="error"/>
+                <div class="relationship__wrap">
+                    <Select className="pathId" variant="'relationship'" isMulti="field.hasMany" value="field.hasMany ? ids : (ids[0] ?? null)"
+                            options="state.options" isLoading="state.loading" getLabel="(id) => this.labelOf(id)" disabled="readOnly"
+                            showError="!!error" onMenuOpen="() => this.load()" onInputChange="(q) => this.onSearch(q)"
+                            onMenuScrollToBottom="() => this.loadMore()" onEdit="(id) => this.edit(id)"
+                            onChange="(v) => this.onChange(v)"/>
+                    <div t-if="!readOnly" class="relationship-add-new" t-att-id="props.path + '-add-new'">
+                        <button type="button" t-att-aria-label="t('fields:addNewLabel', {label: collection?.labels.singular})"
+                                class="relationship-add-new__add-button doc-drawer__toggler" t-on-click="addNew">
+                            <t t-out="icon('plus')"/>
+                        </button>
+                    </div>
+                </div>
+                <t t-call="payload.FieldDescription"/>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.UploadCardContent">
+        <div class="upload-relationship-details">
+            <div class="upload-relationship-details__imageAndDetails">
+                <Thumbnail size="'small'" className="'upload-relationship-details__thumbnail'" src="thumb(d)" alt="d.alt || d.filename"/>
+                <div class="upload-relationship-details__details">
+                    <p class="upload-relationship-details__filename"><a t-att-href="d.url" target="_blank" t-esc="d.filename"/></p>
+                    <p t-if="withMeta" class="upload-relationship-details__meta" t-esc="meta(d)"/>
+                </div>
+            </div>
+            <div t-if="!readOnly" class="upload-relationship-details__actions">
+                <Button className="'upload-relationship-details__edit'" icon="'edit'" iconStyle="'none'" buttonStyle="'icon-label'" onClick="() => this.edit(d.id)"/>
+                <Button className="'upload-relationship-details__remove'" icon="'x'" iconStyle="'none'" buttonStyle="'icon-label'" onClick="() => this.remove(d.id)"/>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.UploadField">
+        <div t-att-class="'field-type upload' + (error ? ' error' : '') + (readOnly ? ' read-only' : '')" t-att-id="pathId" t-att-style="fieldStyle">
+            <t t-call="payload.FieldLabel"/>
+            <div class="upload__wrap"><FieldError message="error"/></div>
+            <div class="upload__dropzoneAndUpload">
+                <t t-if="field.hasMany and ids.length">
+                    <div class="upload upload--has-many">
+                        <div class="upload--has-many__draggable-rows">
+                            <t t-foreach="ids" t-as="id" t-key="id">
+                                <t t-set="d" t-value="doc(id)"/>
+                                <div class="upload--has-many__dragItem">
+                                    <div class="upload-field-card upload-field-card--size-small">
+                                        <t t-if="d and !d.__missing"><t t-set="withMeta" t-value="false"/><t t-call="payload.UploadCardContent"/></t>
+                                        <ShimmerEffect t-elif="!d" height="'40px'"/>
+                                        <span t-else="" t-esc="'Untitled - ID: ' + id"/>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                </t>
+                <t t-elif="!field.hasMany and ids.length">
+                    <t t-set="d" t-value="doc(ids[0])"/>
+                    <div class="upload-field-card upload upload--has-one upload-field-card--size-medium">
+                        <t t-if="d and !d.__missing"><t t-set="withMeta" t-value="true"/><t t-call="payload.UploadCardContent"/></t>
+                        <ShimmerEffect t-elif="!d" height="'62px'"/>
+                        <span t-else="" t-esc="'Untitled - ID: ' + ids[0]"/>
+                    </div>
+                </t>
+                <div t-if="showDropzone" t-att-class="'dropzone dropzoneStyle--default' + (state.dragging ? ' dragging' : '')"
+                     t-on-dragenter.prevent="() => state.dragging = true" t-on-dragover.prevent="() => state.dragging = true"
+                     t-on-dragleave="() => state.dragging = false" t-on-drop="onDrop">
+                    <div class="upload__dropzoneContent">
+                        <div class="upload__dropzoneContent__buttons">
+                            <Button t-if="!readOnly" className="'upload__createNewToggler'" size="'small'" buttonStyle="'pill'"
+                                    label="t('general:createNew')" onClick="() => this.createNew()"/>
+                            <span class="upload__dropzoneContent__orText" t-esc="t('general:or')"/>
+                            <Button className="'upload__listToggler'" size="'small'" buttonStyle="'pill'" disabled="readOnly"
+                                    label="t('fields:chooseFromExisting')" onClick="() => this.chooseExisting()"/>
+                        </div>
+                        <p t-if="!readOnly" class="upload__dragAndDropText" t-esc="t('general:or') + ' ' + t('upload:dragAndDrop')"/>
+                    </div>
+                </div>
+            </div>
+            <t t-call="payload.FieldDescription"/>
+        </div>
+    </t>
+
+    <t t-name="payload.GroupField">
+        <div t-att-class="'field-type group-field' + (props.path.includes('.') ? '' : ' group-field--top-level') + (errorCount() ? ' group-field--has-error' : '')" t-att-id="pathId" t-att-style="fieldStyle">
+            <div class="group-field__wrap">
+                <div t-if="label or admin.description or errorCount()" class="group-field__header">
+                    <header t-if="label or admin.description">
+                        <h3 class="group-field__title"><span class="field-label" t-esc="label"/></h3>
+                        <t t-call="payload.FieldDescription"/>
+                    </header>
+                    <div t-if="errorCount()" class="error-pill"><div class="error-pill__content"><span class="error-pill__count" t-esc="errorCount()"/><t t-esc="errorCount() === 1 ? ' Error' : ' Errors'"/></div></div>
+                </div>
+                <RenderFields fields="field.fields || []" data="groupData" path="props.path" margins="'small'" readOnly="props.readOnly"/>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.RowField">
+        <div class="field-type row">
+            <RenderFields fields="field.fields || []" data="props.data" path="props.path" margins="false" className="'row__fields'" readOnly="props.readOnly"/>
+        </div>
+    </t>
+
+    <t t-name="payload.CollapsibleField">
+        <div t-att-class="'field-type collapsible-field collapsible-field--' + (errorCount() ? 'has-error' : 'has-no-error')" t-att-style="fieldStyle">
+            <div t-att-class="'collapsible collapsible-field__collapsible' + (state.collapsed ? ' collapsible--collapsed' : '') + ' collapsible--style-' + (errorCount() ? 'error' : 'default')">
+                <div class="collapsible__toggle-wrap">
+                    <button type="button" t-att-class="'collapsible__toggle collapsible__toggle--' + (state.collapsed ? 'collapsed' : 'open')"
+                            t-on-click="() => state.collapsed = !state.collapsed"><span>Toggle block</span></button>
+                    <div class="collapsible__header-wrap">
+                        <div class="collapsible-field__row-label-wrap">
+                            <span class="row-label" style="pointer-events: none" t-esc="label"/>
+                        </div>
+                    </div>
+                    <div class="collapsible__actions-wrap"><div class="collapsible__indicator"><t t-out="icon(state.collapsed ? 'chevron' : 'chevron--up')"/></div></div>
+                </div>
+                <AnimateHeight open="!state.collapsed">
+                    <div class="collapsible__content">
+                        <RenderFields fields="field.fields || []" data="props.data" path="props.path" margins="'small'" readOnly="props.readOnly"/>
+                    </div>
+                </AnimateHeight>
+            </div>
+            <t t-call="payload.FieldDescription"/>
+        </div>
+    </t>
+
+    <t t-name="payload.TabsField">
+        <div class="field-type tabs-field">
+            <div class="tabs-field__tabs-wrap">
+                <div class="tabs-field__tabs">
+                    <t t-foreach="tabs" t-as="tab" t-key="tab_index">
+                        <button type="button" t-att-class="'tabs-field__tab-button' + (tabErrors(tab) ? ' tabs-field__tab-button--has-error' : '') + (state.active === tab_index ? ' tabs-field__tab-button--active' : '')"
+                                t-on-click="() => state.active = tab_index">
+                            <t t-esc="tab.label || tab.name || ''"/>
+                            <div t-if="tabErrors(tab)" class="error-pill error-pill--fixed-width"><div class="error-pill__content"><span class="error-pill__count" t-esc="tabErrors(tab)"/></div></div>
+                        </button>
+                    </t>
+                </div>
+            </div>
+            <div class="tabs-field__content-wrap">
+                <t t-set="tab" t-value="tabs[state.active]"/>
+                <div t-if="tab" class="tabs-field__tab" t-key="state.active">
+                    <div t-if="tab.description" class="field-description field-description--margin-bottom" t-esc="tab.description"/>
+                    <RenderFields fields="tab.fields || []" data="tabData(tab)" path="tabPath(tab)" readOnly="props.readOnly"/>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.RowActions">
+        <Popup className="'array-actions'" buttonClassName="'array-actions__button'" size="'medium'" horizontalAlign="'center'">
+            <t t-set-slot="button"><t t-out="icon('more')"/></t>
+            <div class="popup-button-list popup-button-list__text-align--left popup-button-list__button-size--small">
+                <button t-if="row_index > 0" type="button" class="popup-button-list__button array-actions__action array-actions__move-up"
+                        t-on-click="() => this.moveRow(row_index, row_index - 1)">
+                    <div class="array-actions__action-chevron"><t t-out="icon('chevron--up')"/></div><t t-esc="t('general:moveUp')"/>
+                </button>
+                <button t-if="row_index &lt; rows.length - 1" type="button" class="popup-button-list__button array-actions__action"
+                        t-on-click="() => this.moveRow(row_index, row_index + 1)">
+                    <div class="array-actions__action-chevron"><t t-out="icon('chevron')"/></div><t t-esc="t('general:moveDown')"/>
+                </button>
+                <t t-if="!hasMaxRows">
+                    <button type="button" class="popup-button-list__button array-actions__action array-actions__add"
+                            t-on-click="() => field.type === 'blocks' ? this.addBlock(row_index + 1) : this.addRow(row_index + 1)">
+                        <t t-out="icon('plus')"/><t t-esc="t('general:addBelow')"/>
+                    </button>
+                    <button type="button" class="popup-button-list__button array-actions__action array-actions__duplicate"
+                            t-on-click="() => this.duplicateRow(row_index)">
+                        <t t-out="icon('copy')"/><t t-esc="t('general:duplicate')"/>
+                    </button>
+                </t>
+                <button type="button" class="popup-button-list__button array-actions__action array-actions__remove" t-on-click="() => this.removeRow(row_index)">
+                    <t t-out="icon('x')"/><t t-esc="t('general:remove')"/>
+                </button>
+            </div>
+        </Popup>
+    </t>
+
+    <t t-name="payload.ArrayField">
+        <div t-att-class="'field-type array-field array-field--' + (errorCount() ? 'has-error' : 'has-no-error')" t-att-id="pathId" t-att-style="fieldStyle">
+            <FieldError message="error"/>
+            <header class="array-field__header">
+                <div class="array-field__header-wrap">
+                    <div class="array-field__header-content">
+                        <h3 class="array-field__title"><span class="field-label"><t t-esc="label"/><span t-if="field.required" class="required">*</span><span t-if="localeSuffix" class="localized" t-esc="localeSuffix"/></span></h3>
+                        <div t-if="errorCount()" class="error-pill"><div class="error-pill__content"><span class="error-pill__count" t-esc="errorCount()"/><t t-esc="errorCount() === 1 ? ' Error' : ' Errors'"/></div></div>
+                    </div>
+                    <ul t-if="rows.length" class="array-field__header-actions">
+                        <li><button type="button" class="array-field__header-action" t-on-click="() => this.setAll(true)" t-esc="t('fields:collapseAll')"/></li>
+                        <li><button type="button" class="array-field__header-action" t-on-click="() => this.setAll(false)" t-esc="t('fields:showAll')"/></li>
+                    </ul>
+                </div>
+                <t t-call="payload.FieldDescription"/>
+            </header>
+            <div t-if="rows.length" class="array-field__draggable-rows">
+                <t t-foreach="rows" t-as="row" t-key="row.id || row_index">
+                    <div t-att-id="props.path.replaceAll('.', '-') + '-row-' + row_index" t-on-dragover.prevent="onDragOver" t-on-drop="(ev) => this.onDrop(ev, row_index)">
+                        <div t-att-class="'collapsible array-field__row array-field__row--' + (rowErrors(row_index) ? 'has-errors' : 'no-errors') + (readOnly ? '' : ' collapsible--has-drag-handle') + (isCollapsed(row) ? ' collapsible--collapsed' : '') + ' collapsible--style-' + (rowErrors(row_index) ? 'error' : 'default')">
+                            <div class="collapsible__toggle-wrap">
+                                <button type="button" t-att-class="'collapsible__toggle collapsible__toggle--' + (isCollapsed(row) ? 'collapsed' : 'open')" t-on-click="() => this.toggle(row)"><span>Toggle block</span></button>
+                                <div t-if="!readOnly" class="collapsible__drag" role="button" tabindex="0" draggable="true" style="cursor: grab"
+                                     t-on-dragstart="(ev) => this.onDragStart(ev, row_index)"><t t-out="icon('drag-handle')"/></div>
+                                <div t-att-class="'collapsible__header-wrap' + (readOnly ? '' : ' collapsible__header-wrap--has-drag-handle')">
+                                    <div class="array-field__row-header">
+                                        <span class="row-label" style="pointer-events: none" t-esc="(admin.rowLabelField and (row[admin.rowLabelField] || row[admin.rowLabelFallback])) || labels.singular + ' ' + rowNumber(row_index)"/>
+                                        <div t-if="rowErrors(row_index)" class="error-pill"><div class="error-pill__content"><span class="error-pill__count" t-esc="rowErrors(row_index)"/><t t-esc="rowErrors(row_index) === 1 ? ' Error' : ' Errors'"/></div></div>
+                                    </div>
+                                </div>
+                                <div class="collapsible__actions-wrap">
+                                    <div t-if="!readOnly" class="collapsible__actions"><t t-call="payload.RowActions"/></div>
+                                    <div class="collapsible__indicator"><t t-out="icon(isCollapsed(row) ? 'chevron' : 'chevron--up')"/></div>
+                                </div>
+                            </div>
+                            <AnimateHeight open="!isCollapsed(row)">
+                                <div class="collapsible__content">
+                                    <RenderFields fields="field.fields || []" data="row" path="rowPath(row_index)" margins="'small'" className="'array-field__fields'" readOnly="props.readOnly"/>
+                                </div>
+                            </AnimateHeight>
+                        </div>
+                    </div>
+                </t>
+            </div>
+            <Button t-if="!hasMaxRows and !readOnly" className="'array-field__add-row'" icon="'plus'" iconStyle="'with-border'" iconPosition="'left'"
+                    buttonStyle="'icon-label'" label="t('fields:addLabel', {label: labels.singular})" onClick="() => this.addRow()"/>
+        </div>
+    </t>
+
+    <t t-name="payload.BlocksField">
+        <div t-att-class="'field-type blocks-field blocks-field--' + (errorCount() ? 'has-error' : 'has-no-error')" t-att-id="pathId" t-att-style="fieldStyle">
+            <FieldError message="error"/>
+            <header class="blocks-field__header">
+                <div class="blocks-field__header-wrap">
+                    <div class="blocks-field__heading-with-error">
+                        <h3><span class="field-label"><t t-esc="label"/><span t-if="field.required" class="required">*</span><span t-if="localeSuffix" class="localized" t-esc="localeSuffix"/></span></h3>
+                        <div t-if="errorCount()" class="error-pill"><div class="error-pill__content"><span class="error-pill__count" t-esc="errorCount()"/><t t-esc="errorCount() === 1 ? ' Error' : ' Errors'"/></div></div>
+                    </div>
+                    <ul t-if="rows.length" class="blocks-field__header-actions">
+                        <li><button type="button" class="blocks-field__header-action" t-on-click="() => this.setAll(true)" t-esc="t('fields:collapseAll')"/></li>
+                        <li><button type="button" class="blocks-field__header-action" t-on-click="() => this.setAll(false)" t-esc="t('fields:showAll')"/></li>
+                    </ul>
+                </div>
+                <t t-call="payload.FieldDescription"/>
+            </header>
+            <div class="blocks-field__rows">
+                <t t-foreach="rows" t-as="row" t-key="row.id || row_index">
+                    <div t-att-id="props.path.replaceAll('.', '-') + '-row-' + row_index" t-on-dragover.prevent="onDragOver" t-on-drop="(ev) => this.onDrop(ev, row_index)">
+                        <div t-att-class="'collapsible blocks-field__row blocks-field__row--' + (rowErrors(row_index) ? 'has-errors' : 'no-errors') + (readOnly ? '' : ' collapsible--has-drag-handle') + (isCollapsed(row) ? ' collapsible--collapsed' : '') + ' collapsible--style-' + (rowErrors(row_index) ? 'error' : 'default')">
+                            <div class="collapsible__toggle-wrap">
+                                <button type="button" t-att-class="'collapsible__toggle collapsible__toggle--' + (isCollapsed(row) ? 'collapsed' : 'open')" t-on-click="() => this.toggle(row)"><span>Toggle block</span></button>
+                                <div t-if="!readOnly" class="collapsible__drag" role="button" tabindex="0" draggable="true" style="cursor: grab"
+                                     t-on-dragstart="(ev) => this.onDragStart(ev, row_index)"><t t-out="icon('drag-handle')"/></div>
+                                <div t-att-class="'collapsible__header-wrap' + (readOnly ? '' : ' collapsible__header-wrap--has-drag-handle')">
+                                    <div class="blocks-field__block-header">
+                                        <span class="blocks-field__block-number" t-esc="rowNumber(row_index)"/>
+                                        <div t-att-class="'pill pill--style-white pill--size-small blocks-field__block-pill blocks-field__block-pill-' + row.blockType"><span class="pill__label" t-esc="blockLabel(row)"/></div>
+                                        <span t-if="admin.rowLabelField" class="row-label" style="pointer-events: none" t-esc="row[admin.rowLabelField] || row[admin.rowLabelFallback] || ''"/>
+                                        <div t-else="" class="section-title" t-att-data-value="row.blockName || ''">
+                                            <input class="section-title__input" t-att-id="rowPath(row_index) + '.blockName'" placeholder="Untitled" type="text"
+                                                   t-att-value="row.blockName || ''" t-att-readonly="readOnly" t-on-input="(ev) => this.setBlockName(row, ev)"/>
+                                        </div>
+                                        <div t-if="rowErrors(row_index)" class="error-pill"><div class="error-pill__content"><span class="error-pill__count" t-esc="rowErrors(row_index)"/><t t-esc="rowErrors(row_index) === 1 ? ' Error' : ' Errors'"/></div></div>
+                                    </div>
+                                </div>
+                                <div class="collapsible__actions-wrap">
+                                    <div t-if="!readOnly" class="collapsible__actions"><t t-call="payload.RowActions"/></div>
+                                    <div class="collapsible__indicator"><t t-out="icon(isCollapsed(row) ? 'chevron' : 'chevron--up')"/></div>
+                                </div>
+                            </div>
+                            <AnimateHeight open="!isCollapsed(row)">
+                                <div class="collapsible__content">
+                                    <RenderFields fields="blockFor(row)?.fields || []" data="row" path="rowPath(row_index)" margins="'small'" className="'blocks-field__fields'" readOnly="props.readOnly"/>
+                                </div>
+                            </AnimateHeight>
+                        </div>
+                    </div>
+                </t>
+            </div>
+            <button t-if="!hasMaxRows and !readOnly" type="button" class="blocks-field__drawer-toggler" t-on-click="() => this.addBlock()">
+                <span aria-disabled="false" class="btn btn--icon btn--icon-style-with-border btn--size-medium btn--icon-position-left btn--withoutPopup btn--style-icon-label btn--withoutPopup">
+                    <span class="btn__content"><span class="btn__label" t-esc="t('fields:addLabel', {label: labels.singular})"/><span class="btn__icon"><t t-out="icon('plus')"/></span></span>
+                </span>
+            </button>
+        </div>
+    </t>
+
+    <t t-name="payload.BlocksDrawer">
+        <div class="block-search">
+            <input class="block-search__input" t-att-placeholder="t('fields:searchForBlock')" t-model="state.search"/>
+            <t t-out="icon('search')"/>
+        </div>
+        <div class="blocks-drawer__blocks-wrapper">
+            <ul class="blocks-drawer__block-groups">
+                <li class="blocks-drawer__block-group blocks-drawer__block-group-none">
+                    <ul class="blocks-drawer__blocks">
+                        <t t-foreach="blocks" t-as="block" t-key="block.slug">
+                            <li class="blocks-drawer__block">
+                                <button type="button" t-att-title="block.labels?.singular || block.slug" class="thumbnail-card thumbnail-card--has-on-click thumbnail-card--align-label-center"
+                                        t-on-click="() => props.close(block)">
+                                    <div class="thumbnail-card__thumbnail">
+                                        <div class="blocks-drawer__default-image">
+                                            <svg width="231" height="151" viewBox="0 0 231 151" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                                                <rect width="231" height="151" fill="#D9D9D9"/>
+                                                <rect x="-17" y="61" width="265" height="29" transform="rotate(-10 -17 61)" fill="#BCBCBC"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <div class="thumbnail-card__label" t-esc="block.labels?.singular || block.slug"/>
+                                </button>
+                            </li>
+                        </t>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </t>
+
+</templates>

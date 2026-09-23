@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- View switcher of the list header (Payload's DefaultListViewTabs) -->
+    <t t-name="payload.ViewSwitcher">
+        <div class="default-list-view-tabs collection-view-switcher" role="tablist" aria-label="Views">
+            <t t-foreach="modes" t-as="mode" t-key="mode.key">
+                <button type="button" role="tab" t-att-aria-selected="mode.key === current ? 'true' : 'false'"
+                        t-att-title="mode.label" t-att-id="'view-' + mode.key"
+                        t-att-class="'btn default-list-view-tabs__button btn--icon-style-without-border btn--size-small btn--withoutPopup btn--style-' + (mode.key === current ? 'pill' : 'tab') + ' btn--icon btn--icon-position-left'"
+                        t-on-click="() => props.onChange(mode.key)">
+                    <span class="btn__content">
+                        <span class="btn__icon"><t t-out="icon(mode.icon)"/></span>
+                        <span class="btn__label" t-esc="mode.label"/>
+                    </span>
+                </button>
+            </t>
+        </div>
+    </t>
+
+    <!-- Toolbar row of the alternative views -->
+    <t t-name="payload.ViewToolbarSelect">
+        <div class="collection-view-toolbar__item">
+            <span class="collection-view-toolbar__label" t-esc="toolbarLabel"/>
+            <Select className="'collection-view-toolbar__select'" value="toolbarValue" options="toolbarOptions" isClearable="false"
+                    isSearchable="false" onChange="toolbarChange"/>
+        </div>
+    </t>
+
+    <!-- ================================================================ Kanban -->
+    <t t-name="payload.KanbanView">
+        <div class="collection-view kanban-view">
+            <div class="collection-view-toolbar">
+                <t t-call="payload.ViewToolbarSelect">
+                    <t t-set="toolbarLabel" t-value="'Group by'"/>
+                    <t t-set="toolbarValue" t-value="state.groupBy"/>
+                    <t t-set="toolbarOptions" t-value="groupOptions"/>
+                    <t t-set="toolbarChange" t-value="(v) => this.setGroupBy(v)"/>
+                </t>
+                <span class="collection-view-toolbar__info" t-if="state.total > state.docs.length" t-esc="state.docs.length + ' of ' + state.total + ' documents'"/>
+                <span class="collection-view-toolbar__hint" t-if="group">Drag a card to another column to change its <t t-esc="group.label"/>.</span>
+            </div>
+            <div t-if="!groupOptions.length" class="banner banner--type-default">
+                <span class="banner__content">Kanban needs a field to group by: a select, radio, checkbox or relationship field (or drafts to group by status).</span>
+            </div>
+            <div t-else="" t-att-class="'kanban-view__board' + (state.loading ? ' kanban-view__board--loading' : '')">
+                <t t-foreach="columns" t-as="column" t-key="column.key">
+                    <section t-att-class="'kanban-view__column' + (state.over === column.key ? ' kanban-view__column--over' : '')"
+                             t-on-dragover.prevent="() => state.over = column.key" t-on-dragleave="() => state.over = null"
+                             t-on-drop.prevent="() => this.onDrop(column)">
+                        <header class="kanban-view__column-header">
+                            <span class="kanban-view__column-title" t-esc="column.label"/>
+                            <span class="pill pill--style-light pill--size-small"><span class="pill__label" t-esc="column.docs.length"/></span>
+                        </header>
+                        <div class="kanban-view__cards">
+                            <t t-foreach="column.docs" t-as="doc" t-key="doc.id">
+                                <article t-att-class="'kanban-view__card' + (state.dragging === doc.id ? ' kanban-view__card--dragging' : '')"
+                                         draggable="true" t-on-dragstart="(ev) => this.onDragStart(ev, doc)" t-on-dragend="() => this.onDragEnd()"
+                                         t-on-click="() => this.open(doc)">
+                                    <Thumbnail t-if="thumbnail(doc)" className="'kanban-view__thumbnail'" size="'small'" src="thumbnail(doc)" alt="title(doc)"/>
+                                    <div class="kanban-view__card-body">
+                                        <a class="kanban-view__card-title" t-att-href="href(doc)" t-esc="title(doc)" t-on-click.stop=""/>
+                                        <div t-foreach="cardColumns" t-as="col" t-key="col.accessor" class="kanban-view__card-field">
+                                            <span class="kanban-view__card-label" t-esc="col.label"/>
+                                            <span class="kanban-view__card-value"><Cell column="col" doc="doc" linked="false"/></span>
+                                        </div>
+                                        <div class="kanban-view__card-meta">
+                                            <span t-if="collection.versions?.drafts and state.groupBy !== '_status'"
+                                                  t-att-class="'pill pill--size-small pill--style-' + (doc._status === 'published' ? 'success' : 'light')">
+                                                <span class="pill__label" t-esc="doc._status === 'published' ? 'Published' : 'Draft'"/>
+                                            </span>
+                                            <span class="kanban-view__card-date" t-esc="formatDate(doc.updatedAt)"/>
+                                        </div>
+                                    </div>
+                                </article>
+                            </t>
+                            <div t-if="!column.docs.length" class="kanban-view__empty">No documents</div>
+                        </div>
+                    </section>
+                </t>
+            </div>
+        </div>
+    </t>
+
+    <!-- Common toolbar of pivot / graph: measure + date interval -->
+    <t t-name="payload.AggregateToolbarEnd">
+        <t t-call="payload.ViewToolbarSelect">
+            <t t-set="toolbarLabel" t-value="'Measure'"/>
+            <t t-set="toolbarValue" t-value="state.measure"/>
+            <t t-set="toolbarOptions" t-value="measures"/>
+            <t t-set="toolbarChange" t-value="(v) => this.set('measure', v)"/>
+        </t>
+        <t t-if="hasDateGroup" t-call="payload.ViewToolbarSelect">
+            <t t-set="toolbarLabel" t-value="'Interval'"/>
+            <t t-set="toolbarValue" t-value="state.interval || 'month'"/>
+            <t t-set="toolbarOptions" t-value="intervals"/>
+            <t t-set="toolbarChange" t-value="(v) => this.set('interval', v)"/>
+        </t>
+    </t>
+
+    <!-- ================================================================ Pivot -->
+    <t t-name="payload.PivotView">
+        <div class="collection-view pivot-view">
+            <div class="collection-view-toolbar">
+                <t t-call="payload.ViewToolbarSelect">
+                    <t t-set="toolbarLabel" t-value="'Rows'"/>
+                    <t t-set="toolbarValue" t-value="state.rows"/>
+                    <t t-set="toolbarOptions" t-value="groupOptions"/>
+                    <t t-set="toolbarChange" t-value="(v) => this.set('rows', v)"/>
+                </t>
+                <button type="button" class="collection-view-toolbar__icon-button" title="Swap rows and columns" t-att-disabled="!state.cols" t-on-click="() => this.swap()">⇄</button>
+                <t t-call="payload.ViewToolbarSelect">
+                    <t t-set="toolbarLabel" t-value="'Columns'"/>
+                    <t t-set="toolbarValue" t-value="state.cols || '__none__'"/>
+                    <t t-set="toolbarOptions" t-value="optionalGroupOptions"/>
+                    <t t-set="toolbarChange" t-value="(v) => this.set('cols', v)"/>
+                </t>
+                <t t-call="payload.AggregateToolbarEnd"/>
+                <button type="button" class="btn btn--icon-style-without-border btn--size-small btn--withoutPopup btn--style-pill collection-view-toolbar__end"
+                        t-att-disabled="!table" t-on-click="() => this.download()">
+                    <span class="btn__content"><span class="btn__label">Download CSV</span></span>
+                </button>
+            </div>
+            <t t-set="pivot" t-value="table"/>
+            <div t-if="pivot and pivot.body.length" t-att-class="'table pivot-view__table' + (state.loading ? ' collection-view--loading' : '')">
+                <table cellpadding="0" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th class="pivot-view__corner" t-esc="measureLabel"/>
+                            <th t-foreach="pivot.cols" t-as="col" t-key="col.key" class="pivot-view__num" t-esc="col.label"/>
+                            <th class="pivot-view__num pivot-view__total">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="pivot.body" t-as="row" t-key="row.key">
+                            <th class="pivot-view__row-label" t-esc="row.label"/>
+                            <td t-foreach="row.cells" t-as="cell" t-key="cell_index" class="pivot-view__num" t-esc="cell"/>
+                            <td class="pivot-view__num pivot-view__total" t-esc="row.total"/>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th class="pivot-view__row-label">Total</th>
+                            <td t-foreach="pivot.footer" t-as="cell" t-key="cell_index" class="pivot-view__num pivot-view__total" t-esc="cell"/>
+                            <td class="pivot-view__num pivot-view__total pivot-view__grand" t-esc="pivot.grand"/>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div t-elif="!state.loading" class="no-results"><h3>No results found</h3><p>No documents match the search and filters.</p></div>
+        </div>
+    </t>
+
+    <!-- ================================================================ Graph -->
+    <t t-name="payload.GraphView">
+        <div class="collection-view graph-view">
+            <div class="collection-view-toolbar">
+                <div class="default-list-view-tabs graph-view__types">
+                    <t t-foreach="types" t-as="type" t-key="type.key">
+                        <button type="button" t-on-click="() => this.setType(type.key)"
+                                t-att-class="'btn default-list-view-tabs__button btn--icon-style-without-border btn--size-small btn--withoutPopup btn--style-' + (state.type === type.key ? 'pill' : 'tab')">
+                            <span class="btn__content"><span class="btn__label" t-esc="type.label"/></span>
+                        </button>
+                    </t>
+                </div>
+                <t t-call="payload.ViewToolbarSelect">
+                    <t t-set="toolbarLabel" t-value="state.type === 'pie' ? 'Slices' : 'X axis'"/>
+                    <t t-set="toolbarValue" t-value="state.x"/>
+                    <t t-set="toolbarOptions" t-value="groupOptions"/>
+                    <t t-set="toolbarChange" t-value="(v) => this.set('x', v)"/>
+                </t>
+                <t t-if="state.type !== 'pie'" t-call="payload.ViewToolbarSelect">
+                    <t t-set="toolbarLabel" t-value="state.type === 'bar' ? 'Stack by' : 'Series'"/>
+                    <t t-set="toolbarValue" t-value="state.stack || '__none__'"/>
+                    <t t-set="toolbarOptions" t-value="optionalGroupOptions"/>
+                    <t t-set="toolbarChange" t-value="(v) => this.set('stack', v)"/>
+                </t>
+                <t t-call="payload.AggregateToolbarEnd"/>
+            </div>
+            <div t-if="svg" t-att-class="'graph-view__chart' + (state.loading ? ' collection-view--loading' : '')">
+                <t t-out="svg"/>
+                <ul t-if="legend.length" class="graph-view__legend">
+                    <li t-foreach="legend" t-as="item" t-key="item_index">
+                        <span class="graph-view__swatch" t-attf-style="background: {{item.color}}"/><t t-esc="item.label"/>
+                    </li>
+                </ul>
+            </div>
+            <div t-elif="!state.loading" class="no-results"><h3>No results found</h3><p>No documents match the search and filters.</p></div>
+        </div>
+    </t>
+
+    <!-- ================================================================ Calendar -->
+    <t t-name="payload.CalendarView">
+        <div class="collection-view calendar-view">
+            <div class="collection-view-toolbar">
+                <div class="calendar-view__nav">
+                    <button type="button" class="clickable-arrow clickable-arrow--left" title="Previous month" t-on-click="() => this.move(-1)"><t t-out="icon('chevron')"/></button>
+                    <button type="button" class="clickable-arrow clickable-arrow--right" title="Next month" t-on-click="() => this.move(1)"><t t-out="icon('chevron')"/></button>
+                    <h3 class="calendar-view__month" t-esc="monthLabel"/>
+                    <button type="button" class="btn btn--icon-style-without-border btn--size-small btn--withoutPopup btn--style-pill" t-on-click="() => this.today()">
+                        <span class="btn__content"><span class="btn__label">Today</span></span>
+                    </button>
+                </div>
+                <t t-call="payload.ViewToolbarSelect">
+                    <t t-set="toolbarLabel" t-value="'Date field'"/>
+                    <t t-set="toolbarValue" t-value="state.dateField"/>
+                    <t t-set="toolbarOptions" t-value="dateFields"/>
+                    <t t-set="toolbarChange" t-value="(v) => this.setField(v)"/>
+                </t>
+                <span t-if="editable" class="collection-view-toolbar__hint">Drag a document to another day to change its date.</span>
+            </div>
+            <div t-att-class="'calendar-view__grid' + (state.loading ? ' collection-view--loading' : '')">
+                <div t-foreach="weekdays" t-as="day" t-key="day" class="calendar-view__weekday" t-esc="day"/>
+                <t t-foreach="weeks" t-as="week" t-key="week_index">
+                    <div t-foreach="week" t-as="day" t-key="day.key"
+                         t-att-class="'calendar-view__day' + (day.outside ? ' calendar-view__day--outside' : '') + (day.today ? ' calendar-view__day--today' : '') + (state.over === day.key ? ' calendar-view__day--over' : '')"
+                         t-on-dragover.prevent="() => state.over = day.key" t-on-dragleave="() => state.over = null" t-on-drop.prevent="() => this.onDrop(day)">
+                        <span class="calendar-view__day-number" t-esc="day.number"/>
+                        <a t-foreach="day.docs" t-as="doc" t-key="doc.id" t-att-href="href(doc)" t-att-title="title(doc)"
+                           t-att-class="'calendar-view__event' + statusClass(doc)" t-att-draggable="editable ? 'true' : 'false'"
+                           t-on-dragstart="(ev) => this.onDragStart(ev, doc)" t-esc="title(doc)"/>
+                        <span t-if="day.more" class="calendar-view__more" t-esc="'+' + day.more + ' more'"/>
+                    </div>
+                </t>
+            </div>
+        </div>
+    </t>
+
+</templates>

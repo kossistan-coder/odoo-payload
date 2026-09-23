@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="payload.RenderJSON">
+        <li class="query-inspector__row-line--nested">
+            <button type="button" aria-label="toggle" t-att-class="'query-inspector__list-toggle' + (isEmpty ? ' query-inspector__list-toggle--empty' : '')" t-on-click="() => state.open = !state.open">
+                <t t-if="!isEmpty" t-out="icon('chevron', 'query-inspector__toggle-row-icon query-inspector__toggle-row-icon--' + (state.open ? 'open' : 'closed'))"/>
+                <span>
+                    <t t-if="props.name !== undefined and props.parentType === 'object'" t-esc="'&quot;' + props.name + '&quot;: '"/>
+                    <span class="query-inspector__bracket query-inspector__bracket--position-start" t-esc="isArray ? '[' : '{'"/>
+                    <span t-if="isEmpty" class="query-inspector__bracket query-inspector__bracket--position-end" t-esc="(isArray ? ']' : '}') + (props.trailingComma ? ',' : '')"/>
+                </span>
+            </button>
+            <ul class="query-inspector__json-children query-inspector__json-children--nested">
+                <t t-if="state.open">
+                    <t t-foreach="entries" t-as="entry" t-key="entry[0]">
+                        <t t-if="isObject(entry[1])">
+                            <RenderJSON value="entry[1]" name="entry[0]" parentType="isArray ? 'array' : 'object'" trailingComma="!entry_last"/>
+                        </t>
+                        <li t-else="" t-att-class="'query-inspector__row-line query-inspector__value-type--' + typeOf(entry[1]) + ' query-inspector__row-line--nested'">
+                            <span t-if="!isArray" t-esc="'&quot;' + entry[0] + '&quot;: '"/>
+                            <span class="query-inspector__value" t-esc="stringify(entry[1])"/><t t-if="!entry_last">,</t>
+                        </li>
+                    </t>
+                </t>
+            </ul>
+            <span t-if="!isEmpty" class="query-inspector__bracket--nested">
+                <span class="query-inspector__bracket query-inspector__bracket--position-end" t-esc="(isArray ? ']' : '}') + (props.trailingComma ? ',' : '')"/>
+            </span>
+        </li>
+    </t>
+
+    <t t-name="payload.ApiView">
+        <DocumentHeader t-props="headerProps"/>
+        <div t-att-class="'gutter gutter--left query-inspector' + (state.fullscreen ? ' query-inspector--fullscreen' : '')">
+            <div class="query-inspector__configuration">
+                <div class="query-inspector__api-url">
+                    <span class="query-inspector__label">API URL <button type="button" class="copy-to-clipboard" t-on-click="copy"><t t-out="icon('copy')"/></button></span>
+                    <a t-att-href="fetchURL" target="_blank" rel="noopener noreferrer" data-external="1" t-esc="fetchURL"/>
+                </div>
+                <form class="form" novalidate="" t-on-submit.prevent="() => this.fetch()">
+                    <div class="query-inspector__form-fields">
+                        <div class="query-inspector__filter-query-checkboxes">
+                            <div t-if="config.versions?.drafts" t-att-class="'field-type checkbox' + (state.draft ? ' checkbox--checked' : '')">
+                                <CheckboxInput id="'field-draft'" checked="state.draft" label="t('version:draft')" onToggle="(c) => this.setFlag('draft', c)"/>
+                            </div>
+                            <div t-att-class="'field-type checkbox' + (state.authenticated ? ' checkbox--checked' : '')">
+                                <CheckboxInput id="'field-authenticated'" checked="state.authenticated" label="t('authentication:authenticated')" onToggle="(c) => this.setFlag('authenticated', c)"/>
+                            </div>
+                        </div>
+                        <div class="field-type number" style="flex: 1 1 auto">
+                            <label class="field-label" for="field-depth" t-esc="t('general:depth')"/>
+                            <div class="field-type__wrap"><div>
+                                <input id="field-depth" name="depth" type="number" min="0" max="10" step="1" t-att-value="state.depth" t-on-change="setDepth"/>
+                            </div></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="query-inspector__results-wrapper">
+                <div class="query-inspector__toggle-fullscreen-button-container">
+                    <button type="button" aria-label="toggle fullscreen" class="query-inspector__toggle-fullscreen-button" t-on-click="() => state.fullscreen = !state.fullscreen">
+                        <t t-out="icon(state.fullscreen ? 'minimize-maximize--maximized' : 'minimize-maximize--minimized')"/>
+                    </button>
+                </div>
+                <div class="query-inspector__results">
+                    <RenderJSON t-if="state.data" value="state.data" parentType="'object'" trailingComma="false"/>
+                </div>
+            </div>
+        </div>
+    </t>
+
+</templates>

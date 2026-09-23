@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="payload.VersionPill">
+        <div class="version-pill-label">
+            <t t-if="labelFirst">
+                <div t-att-class="'pill pill--style-' + pill.pillStyle + ' pill--size-small'"><span class="pill__label"><span t-esc="pill.label"/></span></div>
+                <span t-if="showDate" class="version-pill-label-date" t-esc="formatDate(version.updatedAt)"/>
+            </t>
+            <t t-else="">
+                <span t-if="showDate" class="version-pill-label-date" t-esc="formatDate(version.updatedAt)"/>
+                <div t-att-class="'pill pill--style-' + pill.pillStyle + ' pill--size-small'"><span class="pill__label"><span t-esc="pill.label"/></span></div>
+            </t>
+        </div>
+    </t>
+
+    <t t-name="payload.VersionsView">
+        <t t-if="state.doc">
+            <DocumentHeader t-props="headerProps('versions')"/>
+        </t>
+        <main class="versions">
+            <div class="gutter gutter--left gutter--right versions__wrap">
+                <t t-if="state.meta">
+                    <div t-if="!state.meta.totalDocs" class="versions__no-versions" t-esc="t('version:noFurtherVersionsFound')"/>
+                    <t t-else="">
+                        <div class="table">
+                            <table cellpadding="0" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th id="heading-updatedAt">
+                                            <div class="sort-column">
+                                                <span class="sort-column__label"><span class="field-label unstyled" t-esc="t('general:updatedAt')"/></span>
+                                                <div class="sort-column__buttons">
+                                                    <button type="button" t-att-class="'sort-column__asc' + (sortActive('asc') ? ' sort-column--active' : '') + ' sort-column__button'" t-on-click="() => this.go({sort: 'updatedAt'})"><t t-out="icon('chevron--up')"/></button>
+                                                    <button type="button" t-att-class="'sort-column__desc' + (sortActive('desc') ? ' sort-column--active' : '') + ' sort-column__button'" t-on-click="() => this.go({sort: '-updatedAt'})"><t t-out="icon('chevron')"/></button>
+                                                </div>
+                                            </div>
+                                        </th>
+                                        <th id="heading-id"><div class="sort-column"><span class="sort-column__label"><span class="field-label unstyled" t-esc="t('version:versionID')"/></span></div></th>
+                                        <th t-if="config.versions?.drafts" id="heading-status"><div class="sort-column"><span class="sort-column__label"><span class="field-label unstyled" t-esc="t('version:status')"/></span></div></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="state.versions" t-as="version" t-key="version.id">
+                                        <tr t-att-class="'row-' + (version_index + 1)">
+                                            <td class="cell-updatedAt"><a t-att-href="adminPath + '/versions/' + version.id" t-esc="formatDate(version.updatedAt)"/></td>
+                                            <td class="cell-id" t-esc="version.id"/>
+                                            <td t-if="config.versions?.drafts" class="cell-status">
+                                                <div class="autosave-cell__items">
+                                                    <div t-if="version.autosave" class="pill pill--style-light pill--size-small"><span class="pill__label" t-esc="t('version:autosave')"/></div>
+                                                    <t t-call="payload.VersionPill">
+                                                        <t t-set="pill" t-value="versionLabel(version)"/>
+                                                        <t t-set="labelFirst" t-value="false"/>
+                                                        <t t-set="showDate" t-value="false"/>
+                                                    </t>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="versions__page-controls">
+                            <div t-if="state.meta.hasPrevPage or state.meta.hasNextPage" class="paginator">
+                                <button t-att-class="'clickable-arrow' + (!state.meta.hasPrevPage ? ' clickable-arrow--is-disabled' : '') + ' clickable-arrow--left'" type="button" t-att-disabled="!state.meta.hasPrevPage" t-on-click="() => this.go({page: state.meta.prevPage})"><t t-out="icon('chevron')"/></button>
+                                <button t-att-class="'clickable-arrow' + (!state.meta.hasNextPage ? ' clickable-arrow--is-disabled' : '') + ' clickable-arrow--right'" type="button" t-att-disabled="!state.meta.hasNextPage" t-on-click="() => this.go({page: state.meta.nextPage})"><t t-out="icon('chevron')"/></button>
+                                <t t-foreach="pages" t-as="n" t-key="n">
+                                    <button t-att-class="'paginator__page' + (n === state.meta.page ? ' paginator__page--is-current' : '')" type="button" t-on-click="() => this.go({page: n})" t-esc="n"/>
+                                </t>
+                            </div>
+                            <div class="versions__page-info" t-esc="pageInfo"/>
+                            <div class="per-page">
+                                <Popup horizontalAlign="'right'" size="'small'">
+                                    <t t-set-slot="button"><div class="per-page__base-button"><span t-esc="t('general:perPage', {limit: state.meta.limit})"/> <t t-out="icon('chevron', 'per-page__icon')"/></div></t>
+                                    <div class="popup-button-list popup-button-list__text-align--left popup-button-list__button-size--default">
+                                        <t t-foreach="perPage" t-as="n" t-key="n">
+                                            <button type="button" t-att-class="'popup-button-list__button per-page__button' + (n === state.meta.limit ? ' per-page__button-active' : '')" t-on-click="() => this.go({limit: n, page: 1})"><span t-esc="n"/></button>
+                                        </t>
+                                    </div>
+                                </Popup>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+            </div>
+        </main>
+    </t>
+
+    <t t-name="payload.FieldDiffLeaf">
+        <t t-set="html" t-value="diffHtml(field)"/>
+        <div t-att-class="'field-diff-container ' + diffClass(field) + ' nested-level-' + (props.level || 0)"
+             t-attf-style="--left-offset: 50%">
+            <div class="field-diff-label" t-esc="label(field)"/>
+            <div class="field-diff-content">
+                <div class="html-diff__diff-old html-diff"><t t-out="html.old"/></div>
+                <div class="html-diff__diff-new html-diff"><t t-out="html.new"/></div>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.FieldDiffs">
+        <div t-att-class="'render-field-diffs' + (props.parent ? ' render-field-diffs--parent' : '')">
+            <t t-foreach="fields" t-as="field" t-key="(field.name || field.type) + field_index">
+                <t t-if="visible(field)">
+                    <div t-att-class="'render-field-diffs__field field__' + field.type" t-att-data-field-path="field.name">
+                        <t t-if="field.type === 'row'">
+                            <div class="row-diff"><FieldDiffs fields="field.fields" from="props.from" to="props.to" modifiedOnly="props.modifiedOnly" level="props.level"/></div>
+                        </t>
+                        <t t-elif="field.type === 'collapsible' or field.type === 'group'">
+                            <div t-att-class="field.type === 'group' ? 'group-diff' : 'collapsible-diff'">
+                                <div class="diff-collapser">
+                                    <div class="field-diff-label">
+                                        <button type="button" class="diff-collapser__toggle-button" t-on-click="() => this.toggle(field.name || field_index)">
+                                            <div class="diff-collapser__label"><span t-esc="label(field)"/></div>
+                                            <t t-out="icon(state.collapsed[field.name || field_index] ? 'chevron--right--size-small' : 'chevron', 'icon--size-small')"/>
+                                        </button>
+                                    </div>
+                                    <div t-att-class="'diff-collapser__content' + (state.collapsed[field.name || field_index] ? ' diff-collapser__content--is-collapsed' : '')">
+                                        <FieldDiffs fields="field.fields" from="fromOf(field)" to="toOf(field)" modifiedOnly="props.modifiedOnly" level="(props.level || 0) + 1"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                        <t t-elif="field.type === 'tabs'">
+                            <div class="tabs-diff">
+                                <t t-foreach="field.tabs" t-as="tab" t-key="tab_index">
+                                    <div t-if="!props.modifiedOnly or tabChanged(tab)" class="tabs-diff__tab">
+                                        <div class="diff-collapser">
+                                            <div class="field-diff-label">
+                                                <button type="button" class="diff-collapser__toggle-button" t-on-click="() => this.toggle('tab' + tab_index)">
+                                                    <div class="diff-collapser__label"><span t-esc="tab.label || tab.name"/></div>
+                                                    <t t-out="icon(state.collapsed['tab' + tab_index] ? 'chevron--right--size-small' : 'chevron', 'icon--size-small')"/>
+                                                </button>
+                                            </div>
+                                            <div t-att-class="'diff-collapser__content' + (state.collapsed['tab' + tab_index] ? ' diff-collapser__content--is-collapsed' : '')">
+                                                <FieldDiffs fields="tab.fields" from="tab.name ? props.from?.[tab.name] : props.from" to="tab.name ? props.to?.[tab.name] : props.to"
+                                                            modifiedOnly="props.modifiedOnly" level="(props.level || 0) + 1"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+                        <t t-elif="field.type === 'array' or field.type === 'blocks'">
+                            <div class="iterable-diff">
+                                <div class="diff-collapser">
+                                    <div class="field-diff-label">
+                                        <button type="button" class="diff-collapser__toggle-button" t-on-click="() => this.toggle(field.name)">
+                                            <div class="diff-collapser__label"><span t-esc="label(field)"/></div>
+                                            <t t-out="icon(state.collapsed[field.name] ? 'chevron--right--size-small' : 'chevron', 'icon--size-small')"/>
+                                        </button>
+                                    </div>
+                                    <div t-att-class="'diff-collapser__content' + (state.collapsed[field.name] ? ' diff-collapser__content--is-collapsed' : '')">
+                                        <t t-set="rowList" t-value="rows(field)"/>
+                                        <div t-if="rowList.length" class="iterable-diff__rows">
+                                            <t t-foreach="rowList" t-as="row" t-key="row.index">
+                                                <div class="iterable-diff__row">
+                                                    <div class="diff-collapser">
+                                                        <div class="field-diff-label">
+                                                            <button type="button" class="diff-collapser__toggle-button" t-on-click="() => this.toggle(field.name + row.index)">
+                                                                <div class="diff-collapser__label">
+                                                                    <div class="iterable-diff-label-container"><div class="iterable-diff-label-prefix"/><span class="iterable-diff__label" t-esc="row.label"/></div>
+                                                                </div>
+                                                                <t t-out="icon(state.collapsed[field.name + row.index] ? 'chevron--right--size-small' : 'chevron', 'icon--size-small')"/>
+                                                            </button>
+                                                        </div>
+                                                        <div t-att-class="'diff-collapser__content diff-collapser__content--hide-gutter' + (state.collapsed[field.name + row.index] ? ' diff-collapser__content--is-collapsed' : '')">
+                                                            <FieldDiffs fields="row.fields" from="row.from" to="row.to" modifiedOnly="props.modifiedOnly" level="(props.level || 0) + 1"/>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </t>
+                                        </div>
+                                        <div t-elif="!rowCount(field)" class="iterable-diff__no-rows" t-esc="t('version:noRowsFound', {label: pluralLabel(field)})"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                        <t t-else="">
+                            <t t-call="payload.FieldDiffLeaf"/>
+                        </t>
+                    </div>
+                </t>
+            </t>
+        </div>
+    </t>
+
+    <t t-name="payload.VersionView">
+        <t t-if="state.doc">
+            <DocumentHeader t-props="headerProps('versions')"/>
+        </t>
+        <main class="view-version" t-if="state.versionTo">
+            <div class="gutter gutter--left gutter--right view-version-controls-top">
+                <div class="view-version-controls-top__wrapper">
+                    <h2 t-esc="t('version:compareVersions')"/>
+                    <div class="view-version-controls-top__wrapper-actions">
+                        <span class="view-version__modifiedCheckBox">
+                            <CheckboxInput id="'modifiedOnly'" checked="modifiedOnly" label="t('version:modifiedOnly')" onToggle="(c) => this.toggleModifiedOnly(c)"/>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="gutter gutter--left gutter--right view-version-controls-bottom">
+                <div class="view-version-controls-bottom__wrapper">
+                    <div class="view-version__version-from">
+                        <div class="view-version__version-from-labels">
+                            <span t-esc="t('version:comparingAgainst')"/>
+                            <span t-if="state.versionFrom" class="view-version__time-elapsed" t-esc="t('version:versionAgo', {distance: formatDistance(state.versionFrom.createdAt)})"/>
+                        </div>
+                        <div class="field-type compare-version">
+                            <Select isClearable="false" isSearchable="false" value="state.versionFrom?.id" options="state.options"
+                                    placeholder="t('version:selectVersionToCompare')" onChange="(v) => this.setVersionFrom(v)"/>
+                        </div>
+                    </div>
+                    <div class="view-version__version-to">
+                        <div class="view-version__version-to-labels">
+                            <span t-esc="t('version:currentlyViewing')"/>
+                            <span class="view-version__time-elapsed" t-esc="t('version:versionAgo', {distance: formatDistance(state.versionTo.createdAt)})"/>
+                        </div>
+                        <div class="view-version__version-to-version">
+                            <t t-call="payload.VersionPill">
+                                <t t-set="version" t-value="state.versionTo"/>
+                                <t t-set="pill" t-value="pill(state.versionTo)"/>
+                                <t t-set="labelFirst" t-value="true"/>
+                                <t t-set="showDate" t-value="true"/>
+                            </t>
+                            <div class="restore-version view-version__restore">
+                                <t t-if="canRestoreAsDraft">
+                                    <div class="btn--style-primary btn--withPopup">
+                                        <button type="button" class="btn restore-version__restore-as-draft-button btn--icon-style-without-border btn--size-xsmall" t-on-click="() => this.restore(false)">
+                                            <span class="btn__content"><span class="btn__label" t-esc="t('version:restoreThisVersion')"/></span>
+                                        </button>
+                                        <Popup horizontalAlign="'right'" size="'large'" buttonSize="'xsmall'" noBackground="true">
+                                            <t t-set-slot="button"><t t-out="icon('chevron')"/></t>
+                                            <div class="popup-button-list popup-button-list__text-align--left popup-button-list__button-size--default">
+                                                <PopupButton onClick="() => this.restore(true)"><t t-esc="t('version:restoreAsDraft')"/></PopupButton>
+                                            </div>
+                                        </Popup>
+                                    </div>
+                                </t>
+                                <button t-else="" type="button" class="btn btn--icon-style-without-border btn--size-xsmall btn--withoutPopup btn--style-primary btn--withoutPopup" t-on-click="() => this.restore(false)">
+                                    <span class="btn__content"><span class="btn__label" t-esc="t('version:restoreThisVersion')"/></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="gutter gutter--left gutter--right view-version__diff-wrap">
+                <FieldDiffs parent="true" fields="config.fields" from="state.versionFrom?.version || {}" to="state.versionTo.version" modifiedOnly="modifiedOnly" level="0"/>
+            </div>
+        </main>
+    </t>
+
+</templates>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Payload-like admin panel (OWL single page application served on /admin) -->
+    <template id="admin_page" name="Payload Admin">&lt;!DOCTYPE html&gt;
+        <html lang="en" data-theme="light" dir="ltr">
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <meta name="robots" content="noindex, nofollow"/>
+                <title>Payload</title>
+                <link rel="icon" type="image/svg+xml" href="/payload_cms/static/src/admin/img/favicon.svg"/>
+                <link rel="preconnect" href="https://fonts.googleapis.com"/>
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
+                <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&amp;family=Roboto+Mono:ital,wght@0,100..700;1,100..700&amp;display=swap"/>
+                <t t-call-assets="payload_cms.assets_admin" t-js="false"/>
+                <script type="text/javascript">
+                    window.__PAYLOAD_CONFIG__ = <t t-out="payload_config"/>;
+                </script>
+                <t t-call-assets="payload_cms.assets_admin" t-css="false"/>
+            </head>
+            <body>
+                <div id="app"/>
+            </body>
+        </html>
+    </template>
+
+    <!-- Built-in frontend used by "Preview" and "Live Preview" when no external URL is configured -->
+    <template id="preview_page" name="Payload Preview">&lt;!DOCTYPE html&gt;
+        <html lang="en">
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <title t-out="collection.label_singular or collection.label"/>
+                <link rel="preconnect" href="https://fonts.googleapis.com"/>
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
+                <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&amp;family=Roboto+Mono:ital,wght@0,100..700;1,100..700&amp;display=swap"/>
+                <link rel="stylesheet" href="/payload_cms/static/src/preview/preview.css"/>
+                <script type="text/javascript">
+                    window.__PREVIEW_CONFIG__ = <t t-out="preview_config"/>;
+                </script>
+                <script type="text/javascript" src="/payload_cms/static/src/preview/preview.js" defer="defer"/>
+            </head>
+            <body>
+                <div id="preview-root" class="preview-loading">Loading…</div>
+            </body>
+        </html>
+    </template>
+
+</odoo>

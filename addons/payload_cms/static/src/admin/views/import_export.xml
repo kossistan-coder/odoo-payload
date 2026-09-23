@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Radio group in Payload's markup (vars: radioName, radioOptions, radioValue, radioPick) -->
+    <t t-name="payload.IERadio">
+        <div class="field-type radio-group radio-group--layout-horizontal">
+            <label class="field-label" t-esc="radioLabel"/>
+            <div class="field-type__wrap">
+                <ul class="radio-group--group">
+                    <t t-foreach="radioOptions" t-as="opt" t-key="opt.value">
+                        <li>
+                            <label t-att-for="radioName + '-' + opt.value">
+                                <div t-att-class="'radio-input' + (radioValue === opt.value ? ' radio-input--is-selected' : '')">
+                                    <input type="radio" t-att-id="radioName + '-' + opt.value" t-att-name="radioName" t-att-checked="radioValue === opt.value"
+                                           t-on-change="() => radioPick(opt.value)"/>
+                                    <span class="radio-input__styled-radio"/>
+                                    <span class="radio-input__label" t-esc="opt.label"/>
+                                </div>
+                            </label>
+                        </li>
+                    </t>
+                </ul>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.ExportDrawer">
+        <div class="import-export">
+            <p class="import-export__intro">
+                Export the <t t-esc="collection.labels.plural"/> to a spreadsheet: groups become columns (<code>meta.title</code>),
+                rich text is HTML, relationships are IDs, arrays and blocks are JSON.
+                <t t-if="localeLabel"> Values are exported in <strong t-esc="localeLabel"/>.</t>
+            </p>
+            <div class="render-fields">
+                <t t-call="payload.IERadio">
+                    <t t-set="radioName" t-value="'export-format'"/>
+                    <t t-set="radioLabel" t-value="'Format'"/>
+                    <t t-set="radioOptions" t-value="formats"/>
+                    <t t-set="radioValue" t-value="state.format"/>
+                    <t t-set="radioPick" t-value="(v) => state.format = v"/>
+                </t>
+                <t t-call="payload.IERadio">
+                    <t t-set="radioName" t-value="'export-scope'"/>
+                    <t t-set="radioLabel" t-value="'Documents'"/>
+                    <t t-set="radioOptions" t-value="scopes"/>
+                    <t t-set="radioValue" t-value="state.scope"/>
+                    <t t-set="radioPick" t-value="(v) => state.scope = v"/>
+                </t>
+                <div class="field-type select">
+                    <label class="field-label">Columns</label>
+                    <Select isMulti="true" value="state.columns" options="columnOptions" placeholder="'All columns'"
+                            onChange="(v) => state.columns = v || []"/>
+                    <div class="field-description">Leave empty to export every column.</div>
+                </div>
+                <t t-if="state.format !== 'json'" t-call="payload.IERadio">
+                    <t t-set="radioName" t-value="'export-headers'"/>
+                    <t t-set="radioLabel" t-value="'Column headers'"/>
+                    <t t-set="radioOptions" t-value="[{value: 'labels', label: 'Field labels (Title, Meta › Description)'}, {value: 'paths', label: 'Field names (title, meta.description)'}]"/>
+                    <t t-set="radioValue" t-value="state.headers"/>
+                    <t t-set="radioPick" t-value="(v) => state.headers = v"/>
+                </t>
+                <CheckboxInput t-if="collection.versions?.drafts" label="'Include drafts (latest version of each document)'" checked="state.draft"
+                               onToggle="(v) => state.draft = v"/>
+            </div>
+            <div class="import-export__actions">
+                <Button label="'Download'" onClick="() => this.download()"/>
+                <Button buttonStyle="'secondary'" label="'Cancel'" onClick="() => props.close()"/>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.ImportDrawer">
+        <div class="import-export">
+            <p class="import-export__intro">
+                Import <t t-esc="collection.labels.plural"/> from a CSV, Excel (.xlsx) or JSON file. Columns are matched by field name or label
+                (the export format can be re-imported). <t t-if="localeLabel">Localized values are imported in <strong t-esc="localeLabel"/>. </t>
+                Templates: <a t-att-href="templateURL('xlsx')" data-external="1" download="">Excel</a> · <a t-att-href="templateURL('csv')" data-external="1" download="">CSV</a>
+            </p>
+            <div class="render-fields">
+                <div class="field-type upload import-export__file">
+                    <label class="field-label">File<span class="required">*</span></label>
+                    <div t-if="!state.file" t-att-class="'dropzone' + (state.dragging ? ' dragging' : '') + ' dropzoneStyle--default'"
+                         t-on-dragenter.prevent="() => state.dragging = true" t-on-dragover.prevent="() => state.dragging = true"
+                         t-on-dragleave="() => state.dragging = false" t-on-drop.prevent="onDrop">
+                        <div class="file-field__dropzoneContent">
+                            <div class="file-field__dropzoneButtons">
+                                <Button size="'small'" buttonStyle="'pill'" label="'Select a file'" onClick="() => this.pick()"/>
+                            </div>
+                            <p class="file-field__dragAndDropText">or drag and drop a .csv, .xlsx or .json file</p>
+                        </div>
+                    </div>
+                    <div t-else="" class="import-export__file-selected">
+                        <span class="import-export__file-name" t-esc="state.file.name"/>
+                        <span class="import-export__file-size" t-esc="fileSize"/>
+                        <Button icon="'x'" iconStyle="'with-border'" buttonStyle="'icon-label'" round="true" ariaLabel="'Remove'" onClick="() => this.clearFile()"/>
+                    </div>
+                    <input t-ref="file" type="file" hidden="" accept=".csv,.xlsx,.json" t-on-change="onFile"/>
+                </div>
+                <t t-call="payload.IERadio">
+                    <t t-set="radioName" t-value="'import-mode'"/>
+                    <t t-set="radioLabel" t-value="'Mode'"/>
+                    <t t-set="radioOptions" t-value="modes"/>
+                    <t t-set="radioValue" t-value="state.mode"/>
+                    <t t-set="radioPick" t-value="(v) => this.setMode(v)"/>
+                </t>
+                <div t-if="state.mode !== 'create'" class="field-type select">
+                    <label class="field-label">Match existing documents by</label>
+                    <Select value="state.matchField" options="matchOptions" isClearable="false" onChange="(v) => state.matchField = v || 'id'"/>
+                    <div class="field-description">The column used to find the document to update (e.g. id or slug).</div>
+                </div>
+                <CheckboxInput t-if="collection.versions?.drafts" label="'Save as drafts (a _status column is used otherwise)'" checked="state.draft"
+                               onToggle="(v) => state.draft = v"/>
+            </div>
+
+            <div t-if="state.report" t-att-class="'import-export__report' + (state.report.failed ? ' import-export__report--errors' : '')">
+                <div t-att-class="'banner banner--type-' + (state.report.failed ? 'error' : 'success')">
+                    <span class="banner__content">
+                        <strong t-esc="state.report.dryRun ? 'Validation: ' : 'Import: '"/><t t-esc="state.report.message"/>
+                    </span>
+                </div>
+                <div class="import-export__mapping">
+                    <span class="field-label">Columns</span>
+                    <t t-foreach="mappedColumns" t-as="col" t-key="col.column">
+                        <span t-att-class="'pill pill--style-' + (col.path ? 'light' : 'warning') + ' pill--size-small'" t-att-title="col.path ? col.column + ' → ' + col.path : 'Ignored (no matching field)'">
+                            <span class="pill__label"><t t-esc="col.column"/><t t-if="col.path and col.path !== col.column"> → <t t-esc="col.path"/></t><t t-if="!col.path"> (ignored)</t></span>
+                        </span>
+                    </t>
+                </div>
+                <div t-if="errorRows.length" class="table">
+                    <table cellpadding="0" cellspacing="0">
+                        <thead><tr><th>Row</th><th>Errors</th></tr></thead>
+                        <tbody>
+                            <tr t-foreach="errorRows" t-as="row" t-key="row_index" class="row-error">
+                                <td t-esc="row.row"/>
+                                <td t-esc="formatErrors(row)"/>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="import-export__actions">
+                <t t-if="!state.imported">
+                    <Button buttonStyle="'secondary'" label="state.processing ? 'Checking…' : 'Validate'" disabled="!state.file or state.processing" onClick="() => this.run(true)"/>
+                    <Button label="state.processing ? 'Importing…' : 'Import'" disabled="!state.file or state.processing" onClick="() => this.run(false)"/>
+                </t>
+                <Button t-else="" label="'Done'" onClick="() => props.close(true)"/>
+                <Button t-if="!state.imported" buttonStyle="'secondary'" label="'Cancel'" onClick="() => props.close()"/>
+            </div>
+        </div>
+    </t>
+
+</templates>

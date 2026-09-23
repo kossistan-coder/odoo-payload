@@ -1,0 +1,14 @@
+{
+  "name": "payload-cms-odoo-admin",
+  "private": true,
+  "description": "Build pipeline for the Payload-like admin UI (SCSS from Payload + Tailwind CSS v4)",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.0",
+    "sass": "^1.80.0",
+    "tailwindcss": "^4.1.0"
+  }
+}

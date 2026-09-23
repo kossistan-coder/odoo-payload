@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="payload.Root">
+        <t t-if="!store.ready">
+            <div class="admin-loading"/>
+        </t>
+        <t t-elif="route.name === 'login'">
+            <LoginView/>
+        </t>
+        <t t-elif="route.name === 'logout'">
+            <LogoutView/>
+        </t>
+        <t t-elif="store.user and store.config">
+            <DefaultTemplate className="templateClass">
+                <t t-component="View" t-key="viewKey" route="route"/>
+            </DefaultTemplate>
+        </t>
+        <ModalContainer/>
+        <Toaster/>
+    </t>
+
+</templates>

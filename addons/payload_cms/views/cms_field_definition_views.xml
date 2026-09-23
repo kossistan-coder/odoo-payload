@@ -1,61 +1,91 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Vue Liste pour les Définitions de Champs -->
-    <record id="view_cms_field_definition_tree" model="ir.ui.view">
+    <record id="view_cms_field_definition_list" model="ir.ui.view">
         <field name="name">cms.field.definition.list</field>
         <field name="model">cms.field.definition</field>
         <field name="arch" type="xml">
-            <list string="Définitions de Champs">
+            <list string="Fields">
                 <field name="sequence" widget="handle"/>
-                <field name="collection_id" string="Collection"/>
-                <field name="label" string="Libellé"/>
-                <field name="name" string="Nom technique"/>
-                <field name="field_type" string="Type de champ"/>
+                <field name="collection_id"/>
+                <field name="parent_id" optional="show"/>
+                <field name="name"/>
+                <field name="label"/>
+                <field name="field_type"/>
                 <field name="required" widget="boolean_toggle"/>
-                <field name="localized" widget="boolean_toggle"/>
+                <field name="position" optional="hide"/>
             </list>
         </field>
     </record>
 
-    <!-- Vue Formulaire pour une Définition de Champ -->
     <record id="view_cms_field_definition_form" model="ir.ui.view">
         <field name="name">cms.field.definition.form</field>
         <field name="model">cms.field.definition</field>
         <field name="arch" type="xml">
-            <form string="Définition de Champ">
+            <form string="Field">
                 <sheet>
                     <div class="oe_title">
-                        <label for="label" string="Libellé affiché"/>
-                        <h1>
-                            <field name="label" placeholder="ex: Image de couverture"/>
-                        </h1>
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="e.g. heroImage"/></h1>
                     </div>
-
                     <group>
                         <group>
-                            <field name="name" placeholder="ex: cover_image"/>
-                            <field name="collection_id"/>
                             <field name="field_type"/>
+                            <field name="label"/>
+                            <field name="collection_id" readonly="parent_id"/>
+                            <field name="parent_id" domain="[('collection_id', '=', collection_id)]"/>
                         </group>
                         <group>
-                            <field name="sequence"/>
-                            <field name="required"/>
-                            <field name="localized"/>
+                            <field name="required" invisible="field_type in ('row', 'collapsible', 'tabs', 'tab', 'block', 'group')"/>
+                            <field name="unique" invisible="field_type not in ('text', 'email', 'number', 'slug')"/>
+                            <field name="position"/>
+                            <field name="width"/>
+                            <field name="read_only"/>
+                            <field name="hidden"/>
                         </group>
                     </group>
-
-                    <group string="Configuration JSON spécifique">
-                        <field name="config" widget="char" placeholder="ex: {'maxDepth': 2, 'relationTo': 'authors'}"/>
+                    <group>
+                        <group string="Admin">
+                            <field name="description"/>
+                            <field name="placeholder"/>
+                            <field name="default_value" placeholder='e.g. "draft" or 10 or true'/>
+                            <field name="initially_collapsed" invisible="field_type not in ('array', 'blocks', 'collapsible')"/>
+                        </group>
+                        <group string="Options">
+                            <field name="relation_to_id" invisible="field_type not in ('upload', 'relationship')" required="field_type in ('upload', 'relationship')"/>
+                            <field name="has_many" invisible="field_type not in ('upload', 'relationship', 'select')"/>
+                            <field name="options" invisible="field_type not in ('select', 'radio')" placeholder="draft:Draft&#10;published:Published"/>
+                            <field name="min_value" invisible="field_type != 'number'"/>
+                            <field name="max_value" invisible="field_type != 'number'"/>
+                            <field name="min_rows" invisible="field_type not in ('array', 'blocks')"/>
+                            <field name="max_rows" invisible="field_type not in ('array', 'blocks')"/>
+                            <field name="slug_source" invisible="field_type != 'slug'"/>
+                        </group>
                     </group>
+                    <notebook invisible="field_type not in ('array', 'group', 'blocks', 'block', 'row', 'collapsible', 'tabs', 'tab')">
+                        <page string="Sub fields" name="children">
+                            <field name="child_ids" context="{'default_collection_id': collection_id, 'default_field_type': 'block' if field_type == 'blocks' else ('tab' if field_type == 'tabs' else 'text')}">
+                                <list>
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="label"/>
+                                    <field name="field_type"/>
+                                    <field name="required"/>
+                                    <field name="child_ids" string="Sub fields" widget="many2many_tags" optional="show"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Advanced (JSON)" name="advanced">
+                            <field name="config" widget="text" placeholder='{"admin": {"condition": null}}'/>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>
     </record>
 
-    <!-- Action pour ouvrir les Définitions de Champs -->
     <record id="action_cms_field_definition" model="ir.actions.act_window">
-        <field name="name">Champs de Collection</field>
+        <field name="name">Fields</field>
         <field name="res_model">cms.field.definition</field>
         <field name="view_mode">list,form</field>
     </record>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="payload.ApiDocsView">
+        <div class="api-docs">
+            <header class="doc-header">
+                <div class="gutter gutter--left gutter--right doc-header__header">
+                    <h1 class="doc-header__title">API Docs</h1>
+                    <div class="doc-tabs">
+                        <ul class="doc-tabs__tabs">
+                            <li class="doc-tab">
+                                <a class="doc-tab__link" href="/api-docs/openapi.json" target="_blank" rel="noopener" data-external="1"><span class="doc-tab__label">openapi.json</span></a>
+                            </li>
+                            <li class="doc-tab">
+                                <a class="doc-tab__link" href="/api-docs" target="_blank" rel="noopener" data-external="1"><span class="doc-tab__label">Open ↗</span></a>
+                            </li>
+                            <li t-if="store.config.isAdmin" class="doc-tab">
+                                <a class="doc-tab__link" href="/admin/config/api-docs"><span class="doc-tab__label">Settings</span></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="gutter gutter--left gutter--right render-title__description">
+                    <p>Generated automatically from the collections and globals (OpenAPI 3). Requests made here use your admin session.</p>
+                </div>
+            </header>
+            <div t-if="enabled" class="api-docs__frame-wrap">
+                <iframe class="api-docs__frame" src="/api-docs?embed=1" title="Swagger UI"/>
+            </div>
+            <div t-else="" class="gutter gutter--left gutter--right">
+                <div class="banner banner--type-default"><span class="banner__content">The API documentation is disabled. Enable it in Configuration → API Docs Settings.</span></div>
+            </div>
+        </div>
+    </t>
+
+</templates>

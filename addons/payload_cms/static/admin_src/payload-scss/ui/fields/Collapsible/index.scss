@@ -1,0 +1,11 @@
+
+@layer payload-default {
+  .collapsible-field {
+    &__row-label-wrap {
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: base(0.5);
+    }
+  }
+}

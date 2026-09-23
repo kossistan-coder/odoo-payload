@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Odoo views of the CMS documents. No menu: the list / kanban / pivot / graph / calendar
+         views live in the Payload admin; the form is used for the chatter ("Open in Odoo"). -->
+
+    <record id="view_cms_document_list" model="ir.ui.view">
+        <field name="name">cms.document.list</field>
+        <field name="model">cms.document</field>
+        <field name="arch" type="xml">
+            <list string="CMS documents" default_order="write_date desc">
+                <field name="title"/>
+                <field name="collection_id"/>
+                <field name="kind" optional="hide"/>
+                <field name="tenant_id" optional="hide"/>
+                <field name="status" widget="badge" decoration-success="status == 'published'" decoration-info="status == 'draft'"/>
+                <field name="create_uid" optional="show" string="Author"/>
+                <field name="create_date" optional="hide"/>
+                <field name="write_date" string="Updated"/>
+                <field name="filename" optional="hide"/>
+                <field name="filesize" optional="hide" sum="Total"/>
+                <field name="activity_ids" widget="list_activity" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_cms_document_form" model="ir.ui.view">
+        <field name="name">cms.document.form</field>
+        <field name="model">cms.document</field>
+        <field name="arch" type="xml">
+            <form string="CMS document" create="0">
+                <header>
+                    <button name="action_open_in_payload" type="object" string="Edit in Payload" class="btn-primary"/>
+                    <field name="status" widget="statusbar" readonly="1"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="title" readonly="1" placeholder="Untitled"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="collection_id" readonly="1"/>
+                            <field name="tenant_id" readonly="1" invisible="not tenant_id"/>
+                            <field name="create_uid" readonly="1" string="Author"/>
+                        </group>
+                        <group>
+                            <field name="create_date" readonly="1"/>
+                            <field name="write_date" readonly="1" string="Updated"/>
+                            <field name="filename" readonly="1" invisible="not filename"/>
+                            <field name="filesize" readonly="1" invisible="not filename"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_cms_document_search" model="ir.ui.view">
+        <field name="name">cms.document.search</field>
+        <field name="model">cms.document</field>
+        <field name="arch" type="xml">
+            <search string="CMS documents">
+                <field name="title"/>
+                <field name="collection_id"/>
+                <field name="tenant_id"/>
+                <field name="create_uid" string="Author"/>
+                <filter name="published" string="Published" domain="[('status', '=', 'published')]"/>
+                <filter name="draft" string="Draft" domain="[('status', '=', 'draft')]"/>
+                <separator/>
+                <filter name="collections" string="Collections" domain="[('kind', '=', 'collection')]"/>
+                <filter name="globals" string="Globals" domain="[('kind', '=', 'global')]"/>
+                <separator/>
+                <filter name="my_documents" string="My documents" domain="[('create_uid', '=', uid)]"/>
+                <filter name="my_activities" string="My activities" domain="[('activity_user_id', '=', uid)]"/>
+                <separator/>
+                <filter name="updated" string="Updated" date="write_date"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_collection" string="Collection" context="{'group_by': 'collection_id'}"/>
+                    <filter name="group_status" string="Status" context="{'group_by': 'status'}"/>
+                    <filter name="group_site" string="Site" context="{'group_by': 'tenant_id'}"/>
+                    <filter name="group_author" string="Author" context="{'group_by': 'create_uid'}"/>
+                    <filter name="group_month" string="Updated (month)" context="{'group_by': 'write_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_cms_document_pivot" model="ir.ui.view">
+        <field name="name">cms.document.pivot</field>
+        <field name="model">cms.document</field>
+        <field name="arch" type="xml">
+            <pivot string="CMS documents" sample="1">
+                <field name="collection_id" type="row"/>
+                <field name="status" type="col"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_cms_document_graph" model="ir.ui.view">
+        <field name="name">cms.document.graph</field>
+        <field name="model">cms.document</field>
+        <field name="arch" type="xml">
+            <graph string="CMS documents" type="bar" sample="1">
+                <field name="collection_id"/>
+                <field name="status"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_cms_document_calendar" model="ir.ui.view">
+        <field name="name">cms.document.calendar</field>
+        <field name="model">cms.document</field>
+        <field name="arch" type="xml">
+            <calendar string="CMS documents" date_start="write_date" color="collection_id" mode="month">
+                <field name="title"/>
+                <field name="collection_id"/>
+                <field name="status"/>
+            </calendar>
+        </field>
+    </record>
+
+    <record id="action_cms_documents_odoo" model="ir.actions.act_window">
+        <field name="name">All documents</field>
+        <field name="res_model">cms.document</field>
+        <field name="view_mode">list,form,pivot,graph,calendar,activity</field>
+        <field name="search_view_id" ref="view_cms_document_search"/>
+        <field name="context">{'create': False}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No CMS document yet</p>
+            <p>Documents are created in the Payload admin. Here you get the native Odoo tools:
+               filters, group by, pivot, graph, Excel export, activities and chatter.</p>
+        </field>
+    </record>
+
+    <record id="view_cms_document_activity" model="ir.ui.view">
+        <field name="name">cms.document.activity</field>
+        <field name="model">cms.document</field>
+        <field name="arch" type="xml">
+            <activity string="CMS documents">
+                <templates>
+                    <div t-name="activity-box">
+                        <field name="title" display="full" class="o_text_block"/>
+                        <field name="collection_id" muted="1" display="full" class="o_text_block"/>
+                    </div>
+                </templates>
+            </activity>
+        </field>
+    </record>
+
+</odoo>

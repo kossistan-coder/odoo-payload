@@ -1,0 +1,32 @@
+/*
+ * Webfonts for the admin (loaded from Google Fonts by the <link> in views/admin_templates.xml).
+ *
+ * Payload v3 declares system stacks in ui/scss/app.scss:
+ *   --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, ...   (= SF Pro on macOS)
+ *   --font-mono: 'SF Mono', Menlo, Consolas, Monaco, monospace
+ *   --font-serif: 'Georgia', ...   (rich text editor body)
+ * SF Pro / SF Mono are not on Google Fonts, so their closest equivalents are used
+ * (Inter / Roboto Mono), with Payload's native stacks kept as fallbacks.
+ *
+ * This file is imported WITHOUT a layer on purpose: Tailwind's `@layer theme` (which wins over
+ * Payload's layers) re-declares --font-mono (self reference → invalid) and --font-serif
+ * (Tailwind's ui-serif stack) on :root; unlayered custom properties beat every layer.
+ */
+:root {
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Roboto Mono', 'SF Mono', Menlo, Consolas, Monaco, monospace;
+  --font-serif: 'Georgia', 'Bitstream Charter', 'Charis SIL', Utopia, 'URW Bookman L', serif;
+}
+
+@layer payload {
+  html, body {
+    font-family: var(--font-body);
+  }
+
+  /* Places where Payload hard-codes the SF Mono stack instead of var(--font-mono). */
+  .LexicalEditorTheme__textCode,
+  .lexical-unknown-diff__specifier,
+  code, kbd, samp, pre {
+    font-family: var(--font-mono);
+  }
+}

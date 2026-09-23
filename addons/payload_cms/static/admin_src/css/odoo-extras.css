@@ -1,0 +1,146 @@
+/* Small additions specific to the Odoo port (things Payload renders with React-only libraries). */
+.payload-odoo-hidden { display: none !important; }
+.nav__odoo-link { display: flex; align-items: center; gap: calc(var(--base) / 4); color: var(--theme-elevation-500); text-decoration: none; }
+.nav__odoo-link:hover { color: var(--theme-text); text-decoration: underline; }
+.date-time-picker .react-datepicker__input-container input[type="date"],
+.date-time-picker .react-datepicker__input-container input[type="datetime-local"] { font-family: var(--font-body); }
+.code-editor textarea { width: 100%; min-height: 56px; border: 0; outline: 0; resize: vertical; background: transparent; font-family: var(--font-mono); font-size: 12px; line-height: 18px; padding: calc(var(--base) * 0.4) calc(var(--base) * 0.75); color: var(--theme-elevation-800); }
+.admin-loading { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+/* Native date inputs replace react-datepicker: keep Payload's calendar icon, make the native picker invisible on top of it */
+.date-time-picker .react-datepicker__input-container { position: relative; }
+.date-time-picker input::-webkit-calendar-picker-indicator { position: absolute; right: calc(var(--base) * 0.75); width: 18px; height: 18px; opacity: 0; cursor: pointer; z-index: 2; }
+.date-time-picker__icon-wrap { pointer-events: none; }
+.date-time-picker__icon-wrap .date-time-picker__clear-button { pointer-events: all; }
+.locale-hint { margin-bottom: calc(var(--base) * 1.5); }
+.api-docs .doc-header__header { display: flex; align-items: center; justify-content: space-between; gap: var(--base); padding-top: calc(var(--base) * 1.5); }
+.api-docs .render-title__description { color: var(--theme-elevation-500); padding-bottom: var(--base); }
+.api-docs__frame-wrap { border-top: 1px solid var(--theme-elevation-100); }
+.api-docs__frame { display: block; width: 100%; height: calc(100vh - 190px); min-height: 600px; border: 0; background: #fff; }
+.tenant-selector { width: 100%; align-self: stretch; padding: 0 0 calc(var(--base) * 1.2); margin-bottom: calc(var(--base) * 0.8); border-bottom: 1px solid var(--theme-elevation-100); }
+.tenant-selector .field-label { color: var(--theme-elevation-500); }
+.tenant-selector .field-type.select > div:not(.field-label) { width: 100%; }
+/* Back arrow (always visible, except on the dashboard) */
+.step-nav__back { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: calc(var(--base) * 1.2); height: calc(var(--base) * 1.2); margin-right: calc(var(--base) * 0.5); padding: 0; border: 1px solid var(--theme-elevation-150); border-radius: var(--style-radius-s); background: var(--theme-elevation-0); color: var(--theme-elevation-800); cursor: pointer; }
+.step-nav__back:hover, .step-nav__back:focus-visible { background: var(--theme-elevation-100); border-color: var(--theme-elevation-250); }
+.step-nav__back .icon { width: 18px; height: 18px; }
+.step-nav__back .stroke { stroke: currentColor; fill: none; }
+/* "Translate to…" button of the document controls */
+.doc-controls__translate .popup-button { padding: 0; }
+.translate-btn { display: inline-flex; align-items: center; justify-content: center; width: calc(var(--base) * 1.6); height: calc(var(--base) * 1.6); border-radius: var(--style-radius-s); color: var(--theme-elevation-800); cursor: pointer; }
+.translate-btn:hover { background: var(--theme-elevation-100); }
+.translate-btn .icon { width: 22px; height: 22px; }
+.translate-btn .stroke { stroke: currentColor; stroke-width: 1.4; }
+.translate-menu__title { padding: calc(var(--base) * 0.3) calc(var(--base) * 0.5); color: var(--theme-elevation-500); font-size: 12px; white-space: nowrap; }
+.translate-menu__code { color: var(--theme-elevation-500); }
+/* Import / export drawers */
+.import-export__buttons { margin-left: calc(var(--base) * 0.4); gap: calc(var(--base) * 0.4); }
+.import-export { padding-bottom: calc(var(--base) * 2); max-width: 900px; }
+.import-export__intro { color: var(--theme-elevation-650); margin: 0 0 calc(var(--base) * 1.5); line-height: 1.6; }
+.import-export__intro a { color: var(--theme-text); text-decoration: underline; }
+.import-export .render-fields > * + * { margin-top: calc(var(--base) * 1.2); }
+.import-export .field-description { color: var(--theme-elevation-500); margin-top: calc(var(--base) * 0.3); }
+.import-export__file .dropzone { padding: calc(var(--base) * 1.2); }
+.import-export__file-selected { display: flex; align-items: center; gap: calc(var(--base) * 0.6); padding: calc(var(--base) * 0.6) calc(var(--base) * 0.8); border: 1px solid var(--theme-elevation-150); border-radius: var(--style-radius-s); }
+.import-export__file-name { font-weight: 600; }
+.import-export__file-size { color: var(--theme-elevation-500); flex: 1; }
+.import-export__report { margin-top: calc(var(--base) * 1.5); display: flex; flex-direction: column; gap: calc(var(--base) * 0.8); }
+.import-export__mapping { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.import-export__mapping .field-label { margin-right: 6px; }
+.import-export__report .table { max-height: 320px; overflow: auto; }
+.import-export__report .row-error td { color: var(--theme-error-750, #b42318); vertical-align: top; }
+.import-export__actions { display: flex; gap: calc(var(--base) * 0.6); margin-top: calc(var(--base) * 1.5); }
+.import-export__actions .btn { margin: 0; }
+
+/* ------------------------------------------------------------------ *
+ * Collection views: list / kanban / pivot / graph / calendar
+ * (Odoo's views, drawn with Payload's design tokens)
+ * ------------------------------------------------------------------ */
+.collection-view-switcher { flex-wrap: wrap; margin-right: calc(var(--base) * 0.5); }
+.collection-view-switcher .btn { margin: 0; }
+.collection-view-switcher .btn__icon .icon { width: 18px; height: 18px; }
+.collection-view-switcher .btn__icon .stroke { stroke: currentColor; }
+.collection-view-switcher .btn--style-tab { color: var(--theme-elevation-500); }
+.collection-view-switcher .btn--style-tab:hover { color: var(--theme-text); }
+.collection-view { margin-top: var(--base); }
+.collection-view--loading { opacity: 0.55; transition: opacity 0.2s; }
+.collection-view-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--base) * 0.6) var(--base); margin-bottom: var(--base); }
+.collection-view-toolbar__item { display: flex; align-items: center; gap: calc(var(--base) * 0.4); }
+.collection-view-toolbar__label { color: var(--theme-elevation-500); white-space: nowrap; }
+.collection-view-toolbar__select { min-width: 190px; }
+.collection-view-toolbar__select .rs__control { min-height: 32px; }
+.collection-view-toolbar__info, .collection-view-toolbar__hint { color: var(--theme-elevation-500); font-size: 12px; }
+.collection-view-toolbar__end { margin: 0 0 0 auto; }
+.collection-view-toolbar__icon-button { border: 1px solid var(--theme-elevation-150); background: var(--theme-elevation-0); border-radius: var(--style-radius-s); width: 32px; height: 32px; cursor: pointer; color: var(--theme-elevation-800); }
+.collection-view-toolbar__icon-button:disabled { opacity: 0.4; cursor: default; }
+
+/* Kanban */
+.kanban-view__board { display: flex; gap: var(--base); overflow-x: auto; padding-bottom: var(--base); align-items: flex-start; }
+.kanban-view__board--loading { opacity: 0.55; }
+.kanban-view__column { flex: 0 0 290px; background: var(--theme-elevation-50); border-radius: var(--style-radius-m); padding: calc(var(--base) * 0.6); border: 1px solid transparent; transition: border-color 0.15s, background 0.15s; }
+.kanban-view__column--over { border-color: var(--theme-elevation-400); background: var(--theme-elevation-100); }
+.kanban-view__column-header { display: flex; align-items: center; justify-content: space-between; padding: calc(var(--base) * 0.2) calc(var(--base) * 0.3) calc(var(--base) * 0.6); }
+.kanban-view__column-title { font-weight: 600; }
+.kanban-view__cards { display: flex; flex-direction: column; gap: calc(var(--base) * 0.5); min-height: 60px; }
+.kanban-view__card { display: flex; gap: calc(var(--base) * 0.5); background: var(--theme-elevation-0); border: 1px solid var(--theme-elevation-150); border-radius: var(--style-radius-s); padding: calc(var(--base) * 0.6); cursor: grab; transition: box-shadow 0.15s, border-color 0.15s; }
+.kanban-view__card:hover { border-color: var(--theme-elevation-250); box-shadow: 0 2px 4px -2px rgba(0, 0, 0, 0.1); }
+.kanban-view__card--dragging { opacity: 0.4; }
+.kanban-view__thumbnail { flex: 0 0 48px; width: 48px; height: 48px; }
+.kanban-view__card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.kanban-view__card-title { font-weight: 600; color: var(--theme-text); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kanban-view__card-title:hover { text-decoration: underline; }
+.kanban-view__card-field { display: flex; gap: 6px; font-size: 12px; min-width: 0; }
+.kanban-view__card-label { color: var(--theme-elevation-500); white-space: nowrap; }
+.kanban-view__card-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kanban-view__card-meta { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 4px; }
+.kanban-view__card-date { color: var(--theme-elevation-500); font-size: 12px; margin-left: auto; }
+.kanban-view__empty { color: var(--theme-elevation-400); text-align: center; padding: var(--base) 0; font-size: 12px; }
+
+/* Pivot */
+.pivot-view__table { overflow-x: auto; }
+.pivot-view__table table { min-width: 0; }
+.pivot-view__table th { text-align: left; font-weight: 500; }
+.pivot-view__corner { color: var(--theme-elevation-500); }
+.pivot-view__num { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pivot-view__row-label { font-weight: 500; white-space: nowrap; }
+.pivot-view__total { font-weight: 600; background: var(--theme-elevation-50); }
+.pivot-view__grand { background: var(--theme-elevation-100); }
+.pivot-view__table tfoot th, .pivot-view__table tfoot td { border-top: 1px solid var(--theme-elevation-150); }
+
+/* Graph */
+.graph-view__types { margin-right: calc(var(--base) * 0.5); }
+.graph-view__types .btn { margin: 0; }
+.graph-view__chart { border: 1px solid var(--theme-elevation-100); border-radius: var(--style-radius-m); padding: var(--base); background: var(--theme-elevation-0); }
+.graph-view__svg { display: block; width: 100%; height: auto; max-height: 460px; }
+.graph-view__grid { stroke: var(--theme-elevation-100); stroke-width: 1; }
+.graph-view__axis { stroke: var(--theme-elevation-300); stroke-width: 1; }
+.graph-view__tick { fill: var(--theme-elevation-500); font-size: 12px; font-family: var(--font-body); }
+.graph-view__total { fill: var(--theme-text); font-size: 28px; font-weight: 600; font-family: var(--font-body); }
+.graph-view__bar, .graph-view__slice, .graph-view__dot { transition: opacity 0.15s; }
+.graph-view__bar:hover, .graph-view__slice:hover, .graph-view__dot:hover { opacity: 0.8; }
+.graph-view__line { stroke-width: 2.5; }
+.graph-view__legend { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: var(--base) 0 0; padding: 0; color: var(--theme-elevation-650); font-size: 12px; }
+.graph-view__legend li { display: flex; align-items: center; gap: 6px; }
+.graph-view__swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+/* Calendar */
+.calendar-view__nav { display: flex; align-items: center; gap: calc(var(--base) * 0.4); }
+.calendar-view__nav .clickable-arrow { width: 32px; height: 32px; }
+.calendar-view__month { margin: 0 calc(var(--base) * 0.5); min-width: 170px; text-transform: capitalize; }
+.calendar-view__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--theme-elevation-150); border-left: 1px solid var(--theme-elevation-150); }
+.calendar-view__weekday { padding: calc(var(--base) * 0.4); color: var(--theme-elevation-500); font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; border-right: 1px solid var(--theme-elevation-150); border-bottom: 1px solid var(--theme-elevation-150); background: var(--theme-elevation-50); }
+.calendar-view__day { min-height: 112px; padding: 6px; border-right: 1px solid var(--theme-elevation-150); border-bottom: 1px solid var(--theme-elevation-150); display: flex; flex-direction: column; gap: 3px; min-width: 0; transition: background 0.15s; }
+.calendar-view__day--outside { background: var(--theme-elevation-50); }
+.calendar-view__day--outside .calendar-view__day-number { color: var(--theme-elevation-400); }
+.calendar-view__day--over { background: var(--theme-elevation-100); }
+.calendar-view__day-number { font-size: 12px; font-weight: 600; align-self: flex-end; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.calendar-view__day--today .calendar-view__day-number { background: var(--theme-text); color: var(--theme-bg); }
+.calendar-view__event { display: block; font-size: 12px; padding: 2px 6px; border-radius: var(--style-radius-s); background: var(--theme-elevation-100); color: var(--theme-text); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--theme-success-500, #4caf82); }
+.calendar-view__event--draft { border-left-color: var(--theme-elevation-400); }
+.calendar-view__event:hover { background: var(--theme-elevation-150); }
+.calendar-view__event[draggable="true"] { cursor: grab; }
+.calendar-view__more { font-size: 11px; color: var(--theme-elevation-500); padding-left: 6px; }
+@media (max-width: 768px) {
+  .calendar-view__day { min-height: 72px; }
+  .calendar-view__event { font-size: 10px; }
+  .kanban-view__column { flex-basis: 250px; }
+}

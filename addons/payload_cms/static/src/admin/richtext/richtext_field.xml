@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="payload.RichTextField">
+        <div t-att-class="'field-type rich-text-lexical' + (state.gutter and !admin.hideGutter ? ' rich-text-lexical--show-gutter' : '') + (error ? ' error' : '') + (readOnly ? ' rich-text-lexical--read-only' : '')"
+             t-att-data-field-path="props.path" t-att-style="fieldStyle">
+            <FieldError message="error"/>
+            <div class="rich-text-lexical__label-row">
+                <label t-if="label" class="field-label" t-att-for="pathId"><t t-esc="label"/><span t-if="field.required" class="required">*</span><span t-if="localeSuffix" class="localized" t-esc="localeSuffix"/></label>
+            </div>
+            <div class="rich-text-lexical__wrap">
+                <div t-if="showFixedToolbar" class="fixed-toolbar" t-ref="fixedToolbar"/>
+                <div class="editor-container">
+                    <div class="editor-scroller">
+                        <div class="editor" t-ref="anchor">
+                            <div class="ContentEditable__root" t-ref="editable" t-att-id="pathId" t-att-contenteditable="readOnly ? 'false' : 'true'" role="textbox"
+                                 spellcheck="true" t-att-aria-placeholder="placeholderText" data-lexical-editor="true"
+                                 style="user-select: text; white-space: pre-wrap; word-break: break-word;"/>
+                            <div aria-hidden="true" t-ref="placeholder"><p class="LexicalEditorTheme__placeholder" t-esc="placeholderText"/></div>
+                        </div>
+                    </div>
+                    <div t-if="!readOnly" aria-label="Insert Paragraph" class="insert-paragraph-at-end" role="button" tabindex="0" t-on-click="insertParagraphAtEnd">
+                        <div class="insert-paragraph-at-end-inside"><span>+</span></div>
+                    </div>
+                </div>
+                <div t-if="admin.description" t-att-class="'field-description field-description-' + props.path.replaceAll('.', '__')" t-esc="admin.description"/>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="payload.LinkDrawer">
+        <form class="form" novalidate="" t-on-submit.prevent="save">
+            <t t-component="RenderFields" fields="fields" data="data" path="''"/>
+            <div class="form-submit">
+                <Button type="'submit'" label="t('fields:saveChanges')" onClick="() => this.save()"/>
+            </div>
+        </form>
+    </t>
+
+</templates>

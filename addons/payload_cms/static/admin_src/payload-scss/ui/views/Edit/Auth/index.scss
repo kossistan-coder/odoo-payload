@@ -1,0 +1,140 @@
+
+@layer payload-default {
+  .auth-fields {
+    padding: calc(var(--base) * 2);
+    background: var(--theme-elevation-50);
+    display: flex;
+    flex-direction: column;
+    gap: var(--base);
+
+    &__controls {
+      display: flex;
+      align-items: center;
+      gap: calc(var(--base) / 2);
+      flex-wrap: wrap;
+    }
+
+    &__changing-password {
+      display: flex;
+      flex-direction: column;
+      gap: var(--base);
+    }
+
+    .btn {
+      margin: 0;
+    }
+
+    &__api-key-label {
+      position: relative;
+    }
+
+    @include mid-break {
+      padding: var(--base);
+      gap: calc(var(--base) / 2);
+
+      &__changing-password {
+        gap: calc(var(--base) / 2);
+      }
+    }
+
+    .field-type.api-key {
+      margin-bottom: calc(var(--base) * 0.75);
+
+      input {
+        @include formInput;
+        width: 100%;
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+    }
+
+    .api-key {
+      &__label .copy-to-clipboard {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: $baseline;
+        height: $baseline;
+        line-height: 0;
+      }
+
+      &__actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: calc(var(--base) / 2);
+      }
+
+      &__input-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+
+        &--has-regenerate input {
+          padding-right: calc(var(--base) * 2);
+        }
+
+        &--highlighted {
+          border-radius: var(--style-radius-s);
+          box-shadow: 0 0 0 2px var(--theme-success-500);
+        }
+      }
+
+      &__revoke-button.btn {
+        cursor: pointer;
+        --color: var(--theme-error-500);
+        --hover-color: var(--theme-error-400);
+        --btn-border: 1px solid var(--theme-error-500);
+        --hover-btn-border: 1px solid var(--theme-error-400);
+      }
+
+      &__regenerate-button.btn {
+        @include formInput;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: calc(var(--base) * 2);
+        height: auto;
+        margin: 0 0 0 -1px;
+        padding: 0 calc(var(--base) / 2);
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        background: var(--theme-elevation-100);
+        box-shadow: none;
+        cursor: pointer;
+        --btn-icon-size: 18px;
+      }
+
+      &__toggle-button-wrap {
+        display: flex;
+        align-self: stretch;
+      }
+
+      &__visibility-button.btn {
+        position: absolute;
+        z-index: 1;
+        top: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: calc(var(--base) * 2);
+        height: 100%;
+        margin: 0;
+        padding: 0 calc(var(--base) / 2);
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        --bg-color: transparent;
+        --hover-bg: transparent;
+        --btn-border: 0;
+        --hover-btn-border: 0;
+        --btn-icon-size: calc(var(--base) * 0.9);
+
+        &.api-key__visibility-button--with-regenerate {
+          right: calc(var(--base) * 2);
+        }
+      }
+    }
+  }
+}

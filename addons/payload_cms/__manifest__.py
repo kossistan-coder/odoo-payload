@@ -1,59 +1,60 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Payload CMS',
-    'version': '18.0.1.0.0',
+    'version': '18.0.2.0.0',
     'category': 'Website/Content Management',
     'sequence': 10,
-    'summary': 'Gestion de contenu déclarative inspirée de Payload CMS avec éditeur Lexical',
+    'summary': 'Headless CMS for Odoo with the Payload CMS admin UI and REST API',
     'description': """
-Payload CMS pour Odoo
-=====================
-Ce module intègre l'expérience de gestion de contenu de Payload CMS directement dans le backend Odoo :
-- Concept de Collections typées (pages, posts, etc.)
-- Champs déclaratifs (text, richText, relationship, array, blocks, upload, select)
-- Éditeur de texte riche basé sur Lexical (vanilla) via un widget OWL dédié
-- Stockage JSON au format compatible avec l'arbre sérialisé Lexical / Payload CMS
-- Mise en page à deux colonnes avec sidebar pour les statuts et métadonnées
+Payload CMS for Odoo
+====================
+A headless CMS reproducing Payload CMS (https://payloadcms.com):
+
+- Admin panel on /admin with the same UI as Payload (light theme): dashboard,
+  list view (search, columns, filters, sort, pagination, bulk actions),
+  edit view (fields, sidebar, drafts, autosave, versions, API tab),
+  live preview, uploads with focal point, Lexical rich text editor, slug fields...
+- Collections, globals and fields declared from Odoo (or code-first with
+  Payload-like config dictionaries).
+- Payload-compatible REST API on /api: where queries, depth, pagination,
+  drafts, versions, uploads, JWT / API key / session authentication, CORS.
     """,
-    'author': 'Antigravity / Payload CMS for Odoo',
+    'author': 'Payload CMS for Odoo',
     'website': 'https://payloadcms.com',
     'license': 'LGPL-3',
-    'depends': [
-        'base',
-        'web',
-        'mail',
-    ],
+    'depends': ['base', 'web', 'mail'],
     'data': [
         'security/payload_cms_security.xml',
         'security/ir.model.access.csv',
-        'views/cms_page_views.xml',
         'views/cms_collection_views.xml',
         'views/cms_field_definition_views.xml',
         'views/cms_menus.xml',
+        'views/cms_document_views.xml',
+        'views/admin_templates.xml',
+        'data/cms_data.xml',
+        'data/form_builder_data.xml',
     ],
     'assets': {
+        # Client action embedding the Payload admin inside the Odoo web client
         'web.assets_backend': [
-            # Librairie Lexical standalone (vanilla)
+            'payload_cms/static/src/backend/**/*',
+        ],
+        'payload_cms.assets_admin': [
+            # Payload's own SCSS compiled with Tailwind CSS (see static/admin_src)
+            'payload_cms/static/dist/admin.css',
+            # Runtime: Odoo module loader + OWL
+            'web/static/src/module_loader.js',
+            'web/static/lib/owl/owl.js',
+            'web/static/lib/owl/odoo_module.js',
+            'web/static/src/core/template_inheritance.js',
+            'web/static/src/core/templates.js',
+            # Vanilla Lexical bundle (window.PayloadLexical)
             'payload_cms/static/lib/lexical/lexical.bundle.js',
-            # Feuilles de styles
-            'payload_cms/static/src/scss/payload_cms.scss',
-            'payload_cms/static/src/scss/lexical_editor.scss',
-            # Logique de l'éditeur Lexical
-            'payload_cms/static/src/js/lexical_editor/lexical_theme.js',
-            'payload_cms/static/src/js/lexical_editor/lexical_helper.js',
-            'payload_cms/static/src/js/lexical_editor/lexical_features.js',
-            'payload_cms/static/src/js/lexical_editor/lexical_renderer.js',
-            # Widgets OWL pour champs Odoo
-            'payload_cms/static/src/js/widgets/lexical_field.js',
-            'payload_cms/static/src/js/widgets/payload_media_card.js',
-            'payload_cms/static/src/js/widgets/payload_live_preview.js',
-            # Templates QWeb OWL
-            'payload_cms/static/src/xml/lexical_field.xml',
-            'payload_cms/static/src/xml/payload_media_card.xml',
-            'payload_cms/static/src/xml/payload_live_preview.xml',
+            # Admin application
+            'payload_cms/static/src/admin/**/*.js',
+            'payload_cms/static/src/admin/**/*.xml',
         ],
     },
     'installable': True,
     'application': True,
-    'auto_install': True,
 }

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="payload_cms.PayloadAdminAction">
+        <div class="o_action o_payload_admin_action">
+            <iframe t-ref="frame" class="o_payload_admin_frame" t-att-src="src" title="Payload CMS"/>
+        </div>
+    </t>
+</templates>
