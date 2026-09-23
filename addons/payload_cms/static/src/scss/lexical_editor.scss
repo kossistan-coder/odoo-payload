@@ -1,0 +1,205 @@
+/* ==========================================================================
+   Styles isolés pour le widget LexicalRichTextField (Thème Sombre Payload CMS)
+   Namespacing strict : .o_payload_cms_lexical
+   ========================================================================== */
+
+.o_payload_cms_lexical {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    border: 1px solid #27272a;
+    border-radius: 6px;
+    background-color: #0c0c0e;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    transition: border-color 0.2s;
+
+    &:focus-within {
+        border-color: #52525b;
+    }
+
+    /* Barre d'outils Sombre Payload CMS */
+    .o_payload_lexical_toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.2rem;
+        padding: 0.4rem 0.5rem;
+        background-color: #18181b;
+        border-bottom: 1px solid #27272a;
+        border-top-left-radius: 6px;
+        border-top-right-radius: 6px;
+
+        .o_payload_toolbar_select_wrapper {
+            display: inline-flex;
+            align-items: center;
+            background-color: #111114;
+            border: 1px solid #2e2e34;
+            border-radius: 4px;
+            padding: 0.15rem 0.4rem;
+
+            .o_payload_t_icon {
+                font-size: 0.75rem;
+                font-weight: 700;
+                color: #a1a1aa;
+                margin-right: 0.25rem;
+            }
+
+            .o_payload_toolbar_select {
+                background: transparent;
+                border: 0;
+                color: #f4f4f5;
+                font-size: 0.8125rem;
+                outline: none;
+                cursor: pointer;
+
+                option {
+                    background-color: #18181b;
+                    color: #f4f4f5;
+                }
+            }
+        }
+
+        .o_payload_toolbar_btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            height: 28px;
+            padding: 0 0.35rem;
+            border-radius: 4px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #d4d4d8;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.15s ease-in-out;
+
+            &:hover {
+                background-color: #27272a;
+                color: #ffffff;
+            }
+
+            &.active {
+                background-color: #3f3f46;
+                color: #ffffff;
+            }
+
+            sub, sup {
+                font-size: 0.65rem;
+                line-height: 0;
+            }
+        }
+
+        .o_payload_toolbar_divider {
+            width: 1px;
+            height: 18px;
+            background-color: #2e2e34;
+            margin: 0 0.35rem;
+        }
+    }
+
+    /* Zone de rédaction (ContentEditable) */
+    .o_payload_lexical_editor_wrapper {
+        position: relative;
+        min-height: 320px;
+        background-color: #0c0c0e;
+        cursor: text;
+
+        .o_payload_lexical_editable {
+            outline: none;
+            padding: 1.25rem 1.5rem;
+            min-height: 320px;
+            font-size: 0.975rem;
+            line-height: 1.7;
+            color: #d1d5db;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+            p {
+                margin-bottom: 1rem;
+            }
+
+            h1, .o_payload_lexical_h1 {
+                font-size: 1.85rem;
+                font-weight: 700;
+                color: #ffffff;
+                margin-top: 1.5rem;
+                margin-bottom: 0.75rem;
+                line-height: 1.25;
+            }
+
+            h2, .o_payload_lexical_h2 {
+                font-size: 1.45rem;
+                font-weight: 700;
+                color: #ffffff;
+                margin-top: 1.5rem;
+                margin-bottom: 0.65rem;
+                line-height: 1.3;
+            }
+
+            h3, .o_payload_lexical_h3 {
+                font-size: 1.2rem;
+                font-weight: 600;
+                color: #f4f4f5;
+                margin-top: 1.25rem;
+                margin-bottom: 0.5rem;
+            }
+
+            blockquote, .o_payload_lexical_quote {
+                border-left: 3px solid #6366f1;
+                padding-left: 1.25rem;
+                margin: 1.25rem 0;
+                color: #9ca3af;
+                font-style: italic;
+                background-color: #141418;
+                padding-top: 0.5rem;
+                padding-bottom: 0.5rem;
+                border-radius: 0 4px 4px 0;
+            }
+
+            ul, .o_payload_lexical_ul {
+                list-style-type: disc;
+                padding-left: 1.5rem;
+                margin-bottom: 1rem;
+            }
+
+            ol, .o_payload_lexical_ol {
+                list-style-type: decimal;
+                padding-left: 1.5rem;
+                margin-bottom: 1rem;
+            }
+
+            li, .o_payload_lexical_li {
+                margin-bottom: 0.35rem;
+            }
+
+            a, .o_payload_lexical_link {
+                color: #60a5fa;
+                text-decoration: underline;
+
+                &:hover {
+                    color: #93c5fd;
+                }
+            }
+
+            code, .o_payload_lexical_code {
+                background-color: #1e1e24;
+                color: #f472b6;
+                padding: 0.2rem 0.4rem;
+                border-radius: 4px;
+                font-size: 0.85em;
+                font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+            }
+        }
+
+        .o_payload_lexical_placeholder {
+            position: absolute;
+            top: 1.25rem;
+            left: 1.5rem;
+            color: #52525b;
+            pointer-events: none;
+            user-select: none;
+            font-size: 0.975rem;
+        }
+    }
+}

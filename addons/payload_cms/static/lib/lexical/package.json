@@ -1,0 +1,21 @@
+{
+  "name": "payload-cms-lexical-bundle",
+  "version": "1.0.0",
+  "description": "Bundle Vanilla Lexical pour le widget OWL Payload CMS dans Odoo",
+  "main": "lexical.bundle.js",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "lexical": "^0.20.0",
+    "@lexical/history": "^0.20.0",
+    "@lexical/link": "^0.20.0",
+    "@lexical/list": "^0.20.0",
+    "@lexical/rich-text": "^0.20.0",
+    "@lexical/selection": "^0.20.0",
+    "@lexical/utils": "^0.20.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}

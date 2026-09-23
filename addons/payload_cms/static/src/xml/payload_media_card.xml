@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="payload_cms.PayloadMediaCard">
+        <div class="o_payload_media_card_container">
+            <!-- Input fichier masqué pour déclencher l'explorateur de fichiers -->
+            <input type="file"
+                   t-ref="fileInput"
+                   class="d-none"
+                   accept="image/*"
+                   t-on-change="onFileChange"/>
+
+            <!-- Carte Média avec aperçu (quand une image est chargée) -->
+            <div t-if="hasImage" class="o_payload_media_card" t-on-click="onUploadClick">
+                <div class="o_payload_media_thumb">
+                    <img t-att-src="imageSrc" alt="Banner Thumbnail"/>
+                </div>
+                <div class="o_payload_media_info">
+                    <div class="o_payload_media_filename_row">
+                        <span class="o_payload_media_filename" t-esc="filename"/>
+                        <button type="button" class="o_payload_mini_btn" title="Copier le lien" t-on-click="onCopyLink">
+                            <i class="fa fa-clone"/>
+                        </button>
+                        <button type="button" class="o_payload_mini_btn" title="Changer l'image" t-on-click="onUploadClick">
+                            <i class="fa fa-pencil"/>
+                        </button>
+                    </div>
+                    <div class="o_payload_media_meta" t-esc="fileDetails"/>
+                </div>
+                <button type="button"
+                        class="o_payload_media_close_btn"
+                        title="Supprimer l'image"
+                        t-on-click="onRemoveImage">
+                    <i class="fa fa-times"/>
+                </button>
+            </div>
+
+            <!-- État vide : Dropzone invitant à uploader -->
+            <div t-else="" class="o_payload_media_card o_payload_media_empty" t-on-click="onUploadClick">
+                <div class="o_payload_media_empty_content">
+                    <i class="fa fa-cloud-upload fa-lg me-2 text-muted"/>
+                    <span>Cliquer pour téléverser une image de bannière (JPEG, PNG, WebP)</span>
+                </div>
+            </div>
+        </div>
+    </t>
+
+</templates>

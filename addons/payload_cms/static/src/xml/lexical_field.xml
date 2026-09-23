@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="payload_cms.LexicalRichTextField">
+        <div class="o_payload_cms_lexical" t-att-class="{ 'o_readonly_modifier': props.readonly }">
+            <!-- Barre d'outils Payload Dark Toolbar -->
+            <div t-if="!props.readonly" class="o_payload_lexical_toolbar" role="toolbar">
+                <!-- Sélecteur de bloc (Normal Text, H1, H2, H3, Quote) -->
+                <div class="o_payload_toolbar_select_wrapper">
+                    <span class="o_payload_t_icon">T</span>
+                    <select class="o_payload_toolbar_select" t-on-change="onBlockTypeChange" t-att-value="state.currentBlock">
+                        <option value="paragraph">Normal Text</option>
+                        <option value="h1">Heading 1</option>
+                        <option value="h2">Heading 2</option>
+                        <option value="h3">Heading 3</option>
+                        <option value="quote">Quote</option>
+                        <option value="bullet_list">Bullet List</option>
+                        <option value="numbered_list">Numbered List</option>
+                    </select>
+                </div>
+
+                <!-- Sélecteur d'alignement -->
+                <div class="o_payload_toolbar_select_wrapper ms-1">
+                    <select class="o_payload_toolbar_select o_payload_align_select" t-on-change="onAlignChange">
+                        <option value="left">≡ Left</option>
+                        <option value="center">≡ Center</option>
+                        <option value="right">≡ Right</option>
+                    </select>
+                </div>
+
+                <div class="o_payload_toolbar_divider" />
+
+                <!-- Formats de texte en ligne (B, I, U, S, X2, X^2, Code, Link) -->
+                <t t-foreach="inlineFormats" t-as="fmt" t-key="fmt.id">
+                    <button type="button"
+                            class="o_payload_toolbar_btn"
+                            t-att-title="fmt.label"
+                            t-on-click.prevent="() => this.onExecuteFeature(fmt)">
+                        <span t-if="fmt.char" t-att-style="fmt.style" t-esc="fmt.char"/>
+                        <span t-elif="fmt.html" t-out="fmt.html"/>
+                        <i t-elif="fmt.icon" t-attf-class="fa #{fmt.icon}"/>
+                    </button>
+                </t>
+
+                <div class="o_payload_toolbar_divider" />
+
+                <!-- Undo / Redo -->
+                <button type="button" class="o_payload_toolbar_btn" title="Undo (Ctrl+Z)"
+                        t-on-click.prevent="() => this.onExecuteFeature(featureRegistry.get('undo'))">
+                    <i class="fa fa-undo"/>
+                </button>
+                <button type="button" class="o_payload_toolbar_btn" title="Redo (Ctrl+Y)"
+                        t-on-click.prevent="() => this.onExecuteFeature(featureRegistry.get('redo'))">
+                    <i class="fa fa-repeat"/>
+                </button>
+            </div>
+
+            <!-- Zone d'édition Lexical (Dark background, typography Inter / modern) -->
+            <div class="o_payload_lexical_editor_wrapper">
+                <div t-if="state.isEmpty and !props.readonly" class="o_payload_lexical_placeholder">
+                    Enter content here...
+                </div>
+                <div class="o_payload_lexical_editable"
+                     t-ref="editorContainer"
+                     t-att-contenteditable="!props.readonly ? 'true' : 'false'"
+                     role="textbox"
+                     aria-multiline="true" />
+            </div>
+        </div>
+    </t>
+
+</templates>

@@ -1,0 +1,88 @@
+services:
+  # ==========================================
+  # Service Base de données (PostgreSQL)
+  # ==========================================
+  db:
+    image: postgres:${POSTGRES_VERSION:-16-alpine}
+    container_name: odoo_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-odoo}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-odoo_secure_password_123}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/pgdata
+    networks:
+      - odoo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-odoo} -d ${POSTGRES_DB:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # Service ERP Odoo (v18.0)
+  # ==========================================
+  web:
+    image: odoo:${ODOO_VERSION:-18.0}
+    container_name: odoo_web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${ODOO_PORT:-8069}:8069"
+      - "${ODOO_CHAT_PORT:-8072}:8072"
+    environment:
+      - HOST=db
+      - PORT=5432
+      - USER=${POSTGRES_USER:-odoo}
+      - PASSWORD=${POSTGRES_PASSWORD:-odoo_secure_password_123}
+    volumes:
+      - odoo_data:/var/lib/odoo
+      - ./config/odoo.conf:/etc/odoo/odoo.conf:ro
+      - ./addons:/mnt/extra-addons
+    networks:
+      - odoo-network
+
+  # ==========================================
+  # Service Interface d'administration pgAdmin 4
+  # ==========================================
+  pgadmin:
+    image: dpage/pgadmin4:${PGADMIN_VERSION:-latest}
+    container_name: odoo_pgadmin
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-admin@admin.com}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD:-admin_secure_password_123}
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./config/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    networks:
+      - odoo-network
+
+# ==========================================
+# Volumes persistants
+# ==========================================
+volumes:
+  postgres_data:
+    name: odoo_postgres_data
+  odoo_data:
+    name: odoo_filestore_data
+  pgadmin_data:
+    name: odoo_pgadmin_data
+
+# ==========================================
+# Réseau Docker
+# ==========================================
+networks:
+  odoo-network:
+    name: odoo_network
+    driver: bridge

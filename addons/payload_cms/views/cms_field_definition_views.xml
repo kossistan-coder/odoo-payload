@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Vue Liste pour les Définitions de Champs -->
+    <record id="view_cms_field_definition_tree" model="ir.ui.view">
+        <field name="name">cms.field.definition.list</field>
+        <field name="model">cms.field.definition</field>
+        <field name="arch" type="xml">
+            <list string="Définitions de Champs">
+                <field name="sequence" widget="handle"/>
+                <field name="collection_id" string="Collection"/>
+                <field name="label" string="Libellé"/>
+                <field name="name" string="Nom technique"/>
+                <field name="field_type" string="Type de champ"/>
+                <field name="required" widget="boolean_toggle"/>
+                <field name="localized" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vue Formulaire pour une Définition de Champ -->
+    <record id="view_cms_field_definition_form" model="ir.ui.view">
+        <field name="name">cms.field.definition.form</field>
+        <field name="model">cms.field.definition</field>
+        <field name="arch" type="xml">
+            <form string="Définition de Champ">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="label" string="Libellé affiché"/>
+                        <h1>
+                            <field name="label" placeholder="ex: Image de couverture"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group>
+                            <field name="name" placeholder="ex: cover_image"/>
+                            <field name="collection_id"/>
+                            <field name="field_type"/>
+                        </group>
+                        <group>
+                            <field name="sequence"/>
+                            <field name="required"/>
+                            <field name="localized"/>
+                        </group>
+                    </group>
+
+                    <group string="Configuration JSON spécifique">
+                        <field name="config" widget="char" placeholder="ex: {'maxDepth': 2, 'relationTo': 'authors'}"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action pour ouvrir les Définitions de Champs -->
+    <record id="action_cms_field_definition" model="ir.actions.act_window">
+        <field name="name">Champs de Collection</field>
+        <field name="res_model">cms.field.definition</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+</odoo>

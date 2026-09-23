@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Menu Principal CMS de premier niveau -->
+    <menuitem id="menu_payload_cms_root"
+              name="CMS"
+              sequence="15"
+              web_icon="payload_cms,static/description/icon.png"
+              groups="group_payload_cms_user"/>
+
+    <!-- Section : Contenu -->
+    <menuitem id="menu_payload_cms_content"
+              name="Contenu"
+              parent="menu_payload_cms_root"
+              sequence="10"/>
+
+    <!-- Entrée : Pages -->
+    <menuitem id="menu_payload_cms_pages"
+              name="Pages"
+              parent="menu_payload_cms_content"
+              action="action_cms_page"
+              sequence="10"/>
+
+    <!-- Section : Configuration (Admin CMS) -->
+    <menuitem id="menu_payload_cms_config"
+              name="Configuration"
+              parent="menu_payload_cms_root"
+              sequence="20"
+              groups="group_payload_cms_admin"/>
+
+    <!-- Entrée : Collections -->
+    <menuitem id="menu_payload_cms_collections"
+              name="Collections"
+              parent="menu_payload_cms_config"
+              action="action_cms_collection"
+              sequence="10"/>
+
+    <!-- Entrée : Définitions de Champs -->
+    <menuitem id="menu_payload_cms_fields"
+              name="Champs"
+              parent="menu_payload_cms_config"
+              action="action_cms_field_definition"
+              sequence="20"/>
+
+</odoo>

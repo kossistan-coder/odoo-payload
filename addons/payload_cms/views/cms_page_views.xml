@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Vue Liste (Tree) pour les Pages CMS -->
+    <record id="view_cms_page_tree" model="ir.ui.view">
+        <field name="name">cms.page.list</field>
+        <field name="model">cms.page</field>
+        <field name="arch" type="xml">
+            <list string="Pages" sample="1" decoration-muted="status == 'archived'">
+                <field name="title" string="Titre"/>
+                <field name="slug" string="Slug URL"/>
+                <field name="status" widget="badge"
+                       decoration-info="status == 'draft'"
+                       decoration-success="status == 'published'"
+                       decoration-muted="status == 'archived'"/>
+                <field name="published_at" string="Publié le"/>
+                <field name="author_id" widget="many2one_avatar_user" string="Auteur"/>
+                <field name="write_date" string="Dernière modification"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vue Formulaire "Pixel-Perfect" reproduisant Payload CMS (Dark Mode & Live Preview) -->
+    <record id="view_cms_page_form" model="ir.ui.view">
+        <field name="name">cms.page.form</field>
+        <field name="model">cms.page</field>
+        <field name="arch" type="xml">
+            <form string="Payload CMS" class="o_payload_cms_page_form">
+                <!-- Champs invisibles pour bindings -->
+                <field name="featured_image_filename" invisible="1"/>
+                <field name="status" invisible="1"/>
+
+                <sheet>
+                    <!-- 1. Barre de navigation & Fil d'Ariane façon Payload CMS -->
+                    <div class="o_payload_topbar">
+                        <div class="o_payload_breadcrumbs">
+                            <div class="o_payload_menu_trigger" title="Navigation">
+                                <i class="fa fa-bars" title="Menu"/>
+                            </div>
+                            <div class="o_payload_brand_cube" title="Payload CMS">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                                </svg>
+                            </div>
+                            <div class="o_payload_trail">
+                                <span class="o_payload_separator">/</span>
+                                <span>Pages</span>
+                                <span class="o_payload_separator">/</span>
+                                <span class="o_payload_crumb_active">
+                                    <field name="title" readonly="1" nolabel="1"/>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="o_payload_user_profile" title="Session utilisateur">
+                            <i class="fa fa-power-off" title="Session"/>
+                        </div>
+                    </div>
+
+                    <!-- 2. Titre du document & Boutons d'actions supérieurs -->
+                    <div class="o_payload_document_header">
+                        <h1 class="o_payload_doc_title">
+                            <field name="title" readonly="1" nolabel="1" placeholder="Payload: The best way to build something you truly own"/>
+                        </h1>
+                        <div class="o_payload_top_actions">
+                            <span role="button" class="o_payload_action_btn">Edit</span>
+                            <span role="button" class="o_payload_action_btn active">Live Preview</span>
+                            <span role="button" class="o_payload_action_btn">
+                                <span>Versions</span>
+                                <span class="o_payload_badge">1</span>
+                            </span>
+                            <span role="button" class="o_payload_action_btn">API</span>
+                        </div>
+                    </div>
+
+                    <!-- 3. Statut, Dates & Boutons d'actions (Save Draft, Publish Changes) -->
+                    <div class="o_payload_status_row">
+                        <div class="o_payload_metadata_info">
+                            <div class="o_payload_status_badge">
+                                <span>Status: </span>
+                                <strong invisible="status != 'published'">Published</strong>
+                                <strong invisible="status == 'published'">Draft</strong>
+                                <span> — </span>
+                                <button name="action_publish" type="object" invisible="status == 'published'" string="Publish"/>
+                                <button name="action_set_to_draft" type="object" invisible="status != 'published'" string="Unpublish"/>
+                            </div>
+                            <div class="o_payload_meta_date">
+                                <span>Modified: </span>
+                                <strong><field name="write_date" readonly="1" nolabel="1"/></strong>
+                            </div>
+                            <div class="o_payload_meta_date">
+                                <span>Created: </span>
+                                <strong><field name="create_date" readonly="1" nolabel="1"/></strong>
+                            </div>
+                        </div>
+
+                        <div class="o_payload_primary_actions">
+                            <span role="button" class="o_payload_btn_secondary">Preview</span>
+                            <button name="action_set_to_draft" type="object" class="o_payload_btn_secondary" invisible="status == 'draft'" string="Save Draft"/>
+                            <button name="action_publish" type="object" class="o_payload_btn_publish" string="Publish Changes"/>
+                            <span role="button" class="o_payload_btn_dots" title="Plus d'actions">
+                                <i class="fa fa-ellipsis-v" title="Options"/>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 4. Double Panneau Split View : Éditeur (gauche) & Live Preview (droite) -->
+                    <div class="o_payload_split_layout">
+                        <!-- Colonne gauche (Édition avec onglets Content / Appearance / SEO) -->
+                        <div class="o_payload_editor_pane">
+                            <notebook class="o_payload_notebook">
+                                <!-- Onglet 1 : Content (actif par défaut) -->
+                                <page string="Content" name="page_content">
+                                    <div class="o_payload_field_group mt-3">
+                                        <div class="o_payload_field_label">
+                                            <span>Post Title</span>
+                                            <span class="o_payload_required_star">*</span>
+                                        </div>
+                                        <field name="title" class="o_payload_dark_input" placeholder="Payload: The best way to build something you truly own" nolabel="1" required="1"/>
+                                    </div>
+
+                                    <div class="o_payload_field_group mt-3">
+                                        <div class="o_payload_field_label">
+                                            <span>Banner Image</span>
+                                            <span class="o_payload_required_star">*</span>
+                                        </div>
+                                        <field name="featured_image" widget="payload_media_card" nolabel="1"/>
+                                    </div>
+
+                                    <div class="o_payload_field_group mt-3">
+                                        <div class="o_payload_field_label">
+                                            <span>Content</span>
+                                            <span class="o_payload_required_star">*</span>
+                                        </div>
+                                        <field name="content" widget="payload_lexical" nolabel="1"/>
+                                    </div>
+                                </page>
+
+                                <!-- Onglet 2 : Appearance -->
+                                <page string="Appearance" name="page_appearance">
+                                    <div class="o_payload_field_group mt-3">
+                                        <div class="o_payload_field_label">
+                                            <span>Blocs Modulaires</span>
+                                        </div>
+                                        <field name="block_ids" nolabel="1">
+                                            <list editable="bottom">
+                                                <field name="sequence" widget="handle"/>
+                                                <field name="name" placeholder="Repère du bloc..."/>
+                                                <field name="block_type"/>
+                                                <field name="data" widget="char" placeholder="JSON du bloc"/>
+                                            </list>
+                                        </field>
+                                    </div>
+                                </page>
+
+                                <!-- Onglet 3 : SEO -->
+                                <page string="SEO" name="page_seo">
+                                    <div class="o_payload_field_group mt-3">
+                                        <div class="o_payload_field_label">
+                                            <span>Slug URL</span>
+                                            <span class="o_payload_required_star">*</span>
+                                        </div>
+                                        <field name="slug" class="o_payload_dark_input" placeholder="ex: mon-article" nolabel="1" required="1"/>
+                                    </div>
+
+                                    <div class="o_payload_field_group mt-3">
+                                        <div class="o_payload_field_label">
+                                            <span>Méta-titre SEO</span>
+                                        </div>
+                                        <field name="meta_title" class="o_payload_dark_input" placeholder="Titre pour les moteurs de recherche" nolabel="1"/>
+                                    </div>
+
+                                    <div class="o_payload_field_group mt-3">
+                                        <div class="o_payload_field_label">
+                                            <span>Méta-description SEO</span>
+                                        </div>
+                                        <field name="meta_description" class="o_payload_dark_input" placeholder="Courte description pour Google..." nolabel="1"/>
+                                    </div>
+                                </page>
+                            </notebook>
+                        </div>
+
+                        <!-- Colonne droite : Live Preview interactif en temps réel -->
+                        <div class="o_payload_preview_pane">
+                            <field name="content" widget="payload_live_preview" nolabel="1"/>
+                        </div>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vue Recherche pour les Pages -->
+    <record id="view_cms_page_search" model="ir.ui.view">
+        <field name="name">cms.page.search</field>
+        <field name="model">cms.page</field>
+        <field name="arch" type="xml">
+            <search string="Recherche de Pages">
+                <field name="title" string="Titre"/>
+                <field name="slug" string="Slug"/>
+                <field name="author_id" string="Auteur"/>
+
+                <filter string="Brouillons" name="filter_draft" domain="[('status', '=', 'draft')]"/>
+                <filter string="Publiées" name="filter_published" domain="[('status', '=', 'published')]"/>
+                <filter string="Archivées" name="filter_archived" domain="[('status', '=', 'archived')]"/>
+
+                <group expand="0" string="Regrouper par">
+                    <filter string="Statut" name="group_status" context="{'group_by': 'status'}"/>
+                    <filter string="Auteur" name="group_author" context="{'group_by': 'author_id'}"/>
+                    <filter string="Date de publication" name="group_published_at" context="{'group_by': 'published_at:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action pour ouvrir les Pages -->
+    <record id="action_cms_page" model="ir.actions.act_window">
+        <field name="name">Pages</field>
+        <field name="res_model">cms.page</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_filter_published': 0}</field>
+    </record>
+
+</odoo>

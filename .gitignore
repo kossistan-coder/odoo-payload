@@ -1,0 +1,18 @@
+# Environment variables (contain secrets)
+.env
+
+# Logs and runtime data
+*.log
+.DS_Store
+Thumbs.db
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Local backup / temporary directories
+*.dump
+*.sql
+*.tar.gz

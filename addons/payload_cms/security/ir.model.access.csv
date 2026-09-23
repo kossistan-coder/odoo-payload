@@ -1,0 +1,9 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_cms_collection_user,cms.collection.user,model_cms_collection,group_payload_cms_user,1,0,0,0
+access_cms_collection_admin,cms.collection.admin,model_cms_collection,group_payload_cms_admin,1,1,1,1
+access_cms_field_definition_user,cms.field.definition.user,model_cms_field_definition,group_payload_cms_user,1,0,0,0
+access_cms_field_definition_admin,cms.field.definition.admin,model_cms_field_definition,group_payload_cms_admin,1,1,1,1
+access_cms_page_user,cms.page.user,model_cms_page,group_payload_cms_user,1,1,1,1
+access_cms_page_admin,cms.page.admin,model_cms_page,group_payload_cms_admin,1,1,1,1
+access_cms_block_user,cms.block.user,model_cms_block,group_payload_cms_user,1,1,1,1
+access_cms_block_admin,cms.block.admin,model_cms_block,group_payload_cms_admin,1,1,1,1

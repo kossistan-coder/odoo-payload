@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Catégorie de sécurité dédiée à Payload CMS -->
+        <record id="module_category_payload_cms" model="ir.module.category">
+            <field name="name">Payload CMS</field>
+            <field name="description">Gestion des accès pour le module Payload CMS</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <!-- Groupe : Éditeur de contenu (accès aux pages et blocs) -->
+        <record id="group_payload_cms_user" model="res.groups">
+            <field name="name">Éditeur de contenu</field>
+            <field name="category_id" ref="module_category_payload_cms"/>
+            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+            <field name="comment">L'utilisateur peut créer, modifier et publier des pages et des blocs de contenu.</field>
+        </record>
+
+        <!-- Groupe : Administrateur CMS (accès complet incluant collections et configuration) -->
+        <record id="group_payload_cms_admin" model="res.groups">
+            <field name="name">Administrateur</field>
+            <field name="category_id" ref="module_category_payload_cms"/>
+            <field name="implied_ids" eval="[(4, ref('group_payload_cms_user'))]"/>
+            <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
+            <field name="comment">L'utilisateur a un contrôle total sur les collections, les définitions de champs et les paramètres du CMS.</field>
+        </record>
+    </data>
+</odoo>

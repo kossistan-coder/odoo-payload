@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Vue Liste pour les Collections -->
+    <record id="view_cms_collection_tree" model="ir.ui.view">
+        <field name="name">cms.collection.list</field>
+        <field name="model">cms.collection</field>
+        <field name="arch" type="xml">
+            <list string="Collections">
+                <field name="label" string="Nom affiché"/>
+                <field name="name" string="Nom technique (slug)"/>
+                <field name="icon" string="Icône"/>
+                <field name="field_count" string="Nb de champs"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vue Formulaire pour les Collections -->
+    <record id="view_cms_collection_form" model="ir.ui.view">
+        <field name="name">cms.collection.form</field>
+        <field name="model">cms.collection</field>
+        <field name="arch" type="xml">
+            <form string="Configuration de Collection">
+                <sheet>
+                    <widget name="web_ribbon" title="Archivé" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <label for="label" string="Nom affiché (Label)"/>
+                        <h1>
+                            <field name="label" placeholder="ex: Articles de blog"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group>
+                            <field name="name" placeholder="ex: posts"/>
+                            <field name="icon" placeholder="ex: fa-newspaper-o"/>
+                        </group>
+                        <group>
+                            <field name="active"/>
+                        </group>
+                    </group>
+
+                    <group string="Description fonctionnelle">
+                        <field name="description" nolabel="1" placeholder="Description de l'usage de cette collection..."/>
+                    </group>
+
+                    <notebook>
+                        <page string="Champs déclarés (Payload Schema)">
+                            <field name="field_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name" placeholder="nom_technique"/>
+                                    <field name="label" placeholder="Libellé du champ"/>
+                                    <field name="field_type"/>
+                                    <field name="required"/>
+                                    <field name="localized"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action pour ouvrir les Collections -->
+    <record id="action_cms_collection" model="ir.actions.act_window">
+        <field name="name">Collections</field>
+        <field name="res_model">cms.collection</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Définissez une nouvelle collection de contenu !
+            </p>
+            <p>
+                Configurez les métadonnées et la liste des champs typés de votre schéma de données façon Payload CMS.
+            </p>
+        </field>
+    </record>
+
+</odoo>

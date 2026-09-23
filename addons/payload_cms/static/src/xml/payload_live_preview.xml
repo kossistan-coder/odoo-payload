@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="payload_cms.PayloadLivePreview">
+        <div class="o_payload_preview_container">
+            <!-- Topbar de la prévisualisation (simulant l'UI de test responsive de Payload) -->
+            <div class="o_payload_preview_topbar">
+                <div class="o_payload_preview_controls">
+                    <div class="o_payload_preview_dropdown">
+                        <span t-esc="state.viewportMode"/>
+                        <i class="fa fa-angle-down ms-1"/>
+                    </div>
+                    <div class="o_payload_dimension_inputs">
+                        <input type="text" class="o_payload_dim_input" t-att-value="state.width" readonly="readonly"/>
+                        <span class="mx-1 text-muted">×</span>
+                        <input type="text" class="o_payload_dim_input" t-att-value="state.height" readonly="readonly"/>
+                    </div>
+                    <div class="o_payload_preview_dropdown ms-1">
+                        <span>100%</span>
+                        <i class="fa fa-angle-down ms-1"/>
+                    </div>
+                    <button type="button" class="o_payload_preview_icon_btn ms-2" title="Ouvrir dans une nouvelle fenêtre">
+                        <i class="fa fa-external-link"/>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cadre de rendu en direct (Canvas Live Preview) -->
+            <div class="o_payload_preview_canvas">
+                <div class="o_payload_rendered_page">
+                    <!-- Navigation du site prévisualisé -->
+                    <div class="o_payload_site_nav">
+                        <div class="o_payload_site_logo">
+                            <!-- Logo wireframe cube inspiré de Payload -->
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                                <line x1="12" y1="22.08" x2="12" y2="12"/>
+                            </svg>
+                        </div>
+                        <div class="o_payload_site_menu">
+                            <span>ABOUT</span>
+                            <span>PROJECTS</span>
+                            <span class="active">BLOG</span>
+                            <span>CONTACT</span>
+                        </div>
+                    </div>
+
+                    <!-- Métadonnées & En-tête de l'article -->
+                    <div class="o_payload_article_header">
+                        <div class="o_payload_article_date" t-esc="formattedDate"/>
+                        <h1 class="o_payload_article_title" t-esc="title"/>
+                    </div>
+
+                    <!-- Image de bannière (Hero banner) -->
+                    <div t-if="bannerImageSrc" class="o_payload_article_banner">
+                        <img t-att-src="bannerImageSrc" alt="Banner Preview"/>
+                    </div>
+                    <div t-else="" class="o_payload_article_banner o_payload_banner_placeholder">
+                        <div class="o_payload_gradient_mesh"/>
+                    </div>
+
+                    <!-- Corps de l'article mis à jour en temps réel -->
+                    <div class="o_payload_article_body">
+                        <t t-out="renderedHtmlContent"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+</templates>
