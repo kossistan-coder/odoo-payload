@@ -1,2 +1,0 @@
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_techlives_series_techlives_series,techlives_series.techlives_series,model_techlives_series_techlives_series,base.group_user,1,1,1,1
