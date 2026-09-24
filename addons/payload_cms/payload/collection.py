@@ -25,10 +25,15 @@ from .fields import Field
 
 # slug/kind -> class, filled when the modules are imported
 _registry = {}
+_blocks = {}
 
 
 def registered():
     return list(_registry.values())
+
+
+def registered_blocks():
+    return list(_blocks.values())
 
 
 def _fields_of(cls):
@@ -187,3 +192,67 @@ class Global(_Base):
         spec = super()._spec()
         spec['label'] = cls._label or cls._name.replace('-', ' ').title()
         return spec
+
+
+class Block:
+    """A layout block added to an existing ``blocks`` field (by default the
+    ``layout`` of the native Pages collection), like an Odoo ``_inherit``::
+
+        class LiveHero(Block):
+            _name = 'live-hero'             # blockType
+            _label = 'Hero live'
+            _inherit = 'pages.layout'       # '<collection slug>.<blocks field>' (or a list)
+
+            live = fields.Many2one('events', "Live mis en avant")
+            badge = fields.Char("Badge", translate=True)
+
+    The block is added to the field when the module is installed / updated and
+    removed when the class disappears.
+
+    Automatic mode (Delivery API): ``_delivery_sources(row, env)`` returns the
+    records a block shows, as a list of ``{'field': <relation field of the block>,
+    'collection': <slug>, 'domain': [...], 'order': '...', 'limit': n}`` (or
+    ``'ids': [...]``). They are put in the ``content`` of the block, and the query
+    in ``config.source``::
+
+        @classmethod
+        def _delivery_sources(cls, row, env):
+            if row.get('mode') == 'auto':
+                return [{'field': 'events', 'collection': 'events', 'domain': [('active', '=', True)],
+                         'order': 'date_sortie desc', 'limit': row.get('limit') or 3}]
+    """
+    _name = None
+    _label = None
+    _label_plural = None
+    _inherit = 'pages.layout'
+    _sequence = 100
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if cls.__dict__.get('_name'):
+            cls._module = cls.__module__.split('.')[2] if cls.__module__.startswith('odoo.addons.') else cls.__module__
+            _blocks[cls._name] = cls
+
+    @classmethod
+    def row(cls, **values):
+        """A row of this block filled with its default values (for seeders)::
+
+            LiveHero.row(badge="Episode Spécial")  ->  {'blockType': 'live-hero', 'cta_label': ..., 'badge': ...}
+        """
+        from ..tools.schema import apply_defaults
+        return dict(apply_defaults(cls._spec()['fields'], values), blockType=cls._name)
+
+    @classmethod
+    def _targets(cls):
+        targets = [cls._inherit] if isinstance(cls._inherit, str) else list(cls._inherit or [])
+        return [tuple(t.split('.', 1)) for t in targets if '.' in t]
+
+    @classmethod
+    def _spec(cls):
+        label = cls._label or cls._name.replace('-', ' ').title()
+        return {'slug': cls._name, 'labels': {'singular': label, 'plural': cls._label_plural or label},
+                'fields': build_fields(_fields_of(cls))}
+
+    @classmethod
+    def _hash(cls):
+        return hashlib.sha1(json.dumps(cls._spec(), sort_keys=True, default=str).encode()).hexdigest()

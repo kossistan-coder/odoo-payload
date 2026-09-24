@@ -1,6 +1,7 @@
 /** @odoo-module **/
 
 import { Component, onWillStart, onWillUnmount, reactive, status, useRef, useState } from "@odoo/owl";
+import { extensions } from "../core/extensions";
 import { t } from "../core/i18n";
 import { cacheDoc, ensureDocs, getCachedDoc, relationLabel, searchDocs } from "../core/relations";
 import { checkCondition, defaultValues } from "../core/schema";
@@ -423,7 +424,9 @@ export class RenderFields extends Component {
     }
 
     componentFor(field) {
-        return FIELD_COMPONENTS[field.type] || TextField;
+        // fields declared with component="<name>" use the component registered by a module
+        const custom = field.admin?.component && extensions.fields[field.admin.component];
+        return custom || FIELD_COMPONENTS[field.type] || TextField;
     }
 
     childPath(field) {
@@ -510,6 +513,17 @@ export class TabsField extends FieldBase {
 }
 
 /** Shared logic of array & blocks fields. */
+/** "..." menu of an array / blocks row: the row index comes from the props. */
+export class RowActions extends Component {
+    static template = "payload.RowActions";
+    static components = { Popup };
+
+    setup() {
+        this.icon = icon;
+        this.t = t;
+    }
+}
+
 class RowsField extends FieldBase {
     setup() {
         super.setup();
@@ -622,7 +636,7 @@ class RowsField extends FieldBase {
 
 export class ArrayField extends RowsField {
     static template = "payload.ArrayField";
-    static components = { RenderFields, Popup, PopupButton, Button, AnimateHeight, FieldError, Banner };
+    static components = { RenderFields, Popup, PopupButton, Button, AnimateHeight, FieldError, Banner, RowActions };
 
     addRow(index = this.rawRows.length) {
         const row = defaultValues(this.field.fields || [], {});
@@ -635,7 +649,7 @@ export class ArrayField extends RowsField {
 
 export class BlocksField extends RowsField {
     static template = "payload.BlocksField";
-    static components = { RenderFields, Popup, PopupButton, Button, AnimateHeight, FieldError, Banner };
+    static components = { RenderFields, Popup, PopupButton, Button, AnimateHeight, FieldError, Banner, RowActions };
 
     get blocks() {
         return this.field.blocks || [];
@@ -650,7 +664,8 @@ export class BlocksField extends RowsField {
     }
 
     async addBlock(index = this.rawRows.length) {
-        const block = await openDrawer(BlocksDrawer, { blocks: this.blocks }, { title: t("fields:addLabel", { label: this.labels.singular }), className: "blocks-drawer" });
+        // archived reusable blocks still render their rows but can no longer be added
+        const block = await openDrawer(BlocksDrawer, { blocks: this.blocks.filter((b) => !b.archived) }, { title: t("fields:addLabel", { label: this.labels.singular }), className: "blocks-drawer" });
         if (!block) {
             return;
         }

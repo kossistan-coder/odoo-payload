@@ -35,8 +35,10 @@
         <div t-att-class="'gutter gutter--left query-inspector' + (state.fullscreen ? ' query-inspector--fullscreen' : '')">
             <div class="query-inspector__configuration">
                 <div class="query-inspector__api-url">
-                    <span class="query-inspector__label">API URL <button type="button" class="copy-to-clipboard" t-on-click="copy"><t t-out="icon('copy')"/></button></span>
-                    <a t-att-href="fetchURL" target="_blank" rel="noopener noreferrer" data-external="1" t-esc="fetchURL"/>
+                    <span class="query-inspector__label">JSON-RPC
+                        <button type="button" class="copy-to-clipboard" title="Copy the curl command" t-on-click="() => this.copy(curl)"><t t-out="icon('copy')"/></button>
+                    </span>
+                    <code class="api-view__endpoint" t-esc="'POST ' + rpcURL + '  ·  ' + params.slug + '.web_read'"/>
                 </div>
                 <form class="form" novalidate="" t-on-submit.prevent="() => this.fetch()">
                     <div class="query-inspector__form-fields">
@@ -48,14 +50,36 @@
                                 <CheckboxInput id="'field-authenticated'" checked="state.authenticated" label="t('authentication:authenticated')" onToggle="(c) => this.setFlag('authenticated', c)"/>
                             </div>
                         </div>
-                        <div class="field-type number" style="flex: 1 1 auto">
-                            <label class="field-label" for="field-depth" t-esc="t('general:depth')"/>
-                            <div class="field-type__wrap"><div>
-                                <input id="field-depth" name="depth" type="number" min="0" max="10" step="1" t-att-value="state.depth" t-on-change="setDepth"/>
-                            </div></div>
+                    </div>
+                    <div class="field-type textarea api-view__spec">
+                        <label class="field-label" for="field-specification">Specification
+                            <button type="button" class="btn btn--style-none api-view__link" t-on-click="resetSpec">Reset</button>
+                        </label>
+                        <div class="field-type__wrap">
+                            <textarea id="field-specification" rows="12" spellcheck="false" t-att-value="state.specText"
+                                      t-on-input="onSpecInput" t-on-change="() => this.fetch()"/>
                         </div>
+                        <div class="field-description">Fields returned, nested for the relations: <code>{"speakers": {"fields": {"nom": {}}}}</code>. Without <code>fields</code>, a relation is <code>{id, display_name}</code> and an image its URL.</div>
+                    </div>
+                    <div class="api-view__actions">
+                        <button type="button" class="btn btn--style-secondary btn--size-small" t-on-click="() => this.copy(curl)">Copy curl</button>
+                        <button type="button" class="btn btn--style-secondary btn--size-small" t-on-click="() => this.copy(python)">Copy Python</button>
                     </div>
                 </form>
+                <div class="api-view__routes">
+                    <span class="query-inspector__label">Routes of your modules
+                        <a t-if="store.config?.apiDocs?.enabled" class="api-view__link" href="/admin/api-docs">API docs</a>
+                    </span>
+                    <ul t-if="state.routes.length" class="api-view__route-list">
+                        <li t-foreach="state.routes" t-as="route" t-key="route_index">
+                            <span t-foreach="route.methods" t-as="m" t-key="m" t-att-class="'api-view__method api-view__method--' + m.toLowerCase()" t-esc="m"/>
+                            <code t-esc="route.path"/>
+                            <span class="api-view__route-summary" t-esc="route.summary"/>
+                            <span t-if="route.auth !== 'public'" class="api-view__route-auth">CMS users</span>
+                        </li>
+                    </ul>
+                    <p t-else="" class="field-description">No documented route returns this collection yet. Mark your controller routes with <code>@api_doc(model='<t t-esc="params.slug"/>')</code> or the methods of the collection with <code>@expose</code>.</p>
+                </div>
             </div>
             <div class="query-inspector__results-wrapper">
                 <div class="query-inspector__toggle-fullscreen-button-container">
@@ -64,7 +88,8 @@
                     </button>
                 </div>
                 <div class="query-inspector__results">
-                    <RenderJSON t-if="state.data" value="state.data" parentType="'object'" trailingComma="false"/>
+                    <div t-if="state.error" class="api-view__error" t-esc="state.error"/>
+                    <RenderJSON t-elif="state.data" value="state.data" parentType="'object'" trailingComma="false"/>
                 </div>
             </div>
         </div>

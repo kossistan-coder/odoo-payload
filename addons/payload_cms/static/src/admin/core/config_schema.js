@@ -102,6 +102,30 @@ export function buildFieldBlocks(collections) {
         fields: [{ type: "row", fields: [half(txt("value", "Value", { required: true })), half(txt("label", "Label"))] }],
         admin: {},
     };
+    const badges = (checkbox) => ({
+        name: "badges",
+        type: "array",
+        label: "Badges",
+        labels: { singular: "Badge", plural: "Badges" },
+        fields: [{
+            type: "row",
+            fields: [
+                { ...(checkbox
+                    ? { name: "value", type: "select", label: "Value", required: true, options: [{ value: "true", label: "Checked" }, { value: "false", label: "Unchecked" }], admin: { isClearable: false } }
+                    : txt("value", "Value", { required: true })), admin: { width: "30%" } },
+                { ...txt("label", "Text", { admin: { placeholder: checkbox ? "e.g. Active" : "Option label" } }), admin: { width: "35%" } },
+                {
+                    name: "color",
+                    type: "select",
+                    label: "Colour",
+                    defaultValue: "success",
+                    options: [["success", "Green"], ["danger", "Red"], ["warning", "Orange"], ["info", "Blue"], ["primary", "Purple"], ["muted", "Grey"]].map(([value, label]) => ({ value, label })),
+                    admin: { width: "35%", isClearable: false },
+                },
+            ],
+        }],
+        admin: { description: "Shows the value as a coloured badge in the list and kanban views." },
+    });
     const relationTo = (uploadOnly) => ({
         name: "relationTo",
         type: "select",
@@ -115,10 +139,10 @@ export function buildFieldBlocks(collections) {
         textarea: [required(), txt("defaultValue", "Default Value")],
         email: [required([half(bool("unique", "Unique"))]), txt("defaultValue", "Default Value")],
         number: [required(), { type: "row", fields: [half(num("min", "Min")), half(num("max", "Max"))] }, txt("defaultValue", "Default Value")],
-        checkbox: [txt("defaultValue", "Default Value", { admin: { placeholder: "true / false" } })],
+        checkbox: [txt("defaultValue", "Default Value", { admin: { placeholder: "true / false" } }), badges(true)],
         date: [required()],
-        select: [required([half(bool("hasMany", "Has Many"))]), options, txt("defaultValue", "Default Value", { admin: { description: "JSON value, e.g. \"draft\"" } })],
-        radio: [required(), options, txt("defaultValue", "Default Value")],
+        select: [required([half(bool("hasMany", "Has Many"))]), options, txt("defaultValue", "Default Value", { admin: { description: "JSON value, e.g. \"draft\"" } }), badges(false)],
+        radio: [required(), options, txt("defaultValue", "Default Value"), badges(false)],
         richText: [required()],
         upload: [relationTo(true), required([half(bool("hasMany", "Has Many"))])],
         relationship: [relationTo(false), required([half(bool("hasMany", "Has Many"))])],
@@ -174,6 +198,162 @@ export function buildFieldBlocks(collections) {
         });
     }
     return nested;
+}
+
+const COMPONENT_LABELS = {
+    text: "Text",
+    textarea: "Textarea",
+    richText: "Rich Text Editor",
+    button: "Button",
+    image: "Image",
+    number: "Number",
+    checkbox: "Checkbox",
+    date: "Date",
+    select: "Select",
+    relationship: "Relationship",
+    email: "Email",
+    list: "List",
+};
+
+/** Elementary components of the reusable blocks (Configuration → Blocks). */
+function buildComponentBlocks(collections) {
+    const blocks = [];
+    const nested = {
+        name: "components",
+        type: "blocks",
+        label: "Components",
+        labels: { singular: "Component", plural: "Components" },
+        blocks,
+        admin: { initCollapsed: true, rowLabelField: "name", rowLabelFallback: "label" },
+    };
+    const identity = {
+        type: "row",
+        fields: [
+            half(txt("name", "Name", { required: true, admin: { placeholder: "e.g. title", description: "Property name in the API (camelCase)." } })),
+            half(txt("label", "Label")),
+        ],
+    };
+    const flags = (localizable) => ({
+        type: "row",
+        fields: [
+            half(bool("required", "Required")),
+            localizable && half(bool("localized", "Localized", { admin: { description: "One value per locale." } })),
+        ].filter(Boolean),
+    });
+    const relationTo = (uploadOnly) => ({
+        name: "relationTo",
+        type: "select",
+        label: uploadOnly ? "Media collection" : "Relation To",
+        required: true,
+        defaultValue: uploadOnly ? collections.find((c) => c.upload)?.slug : undefined,
+        options: collections.filter((c) => (uploadOnly ? c.upload : true)).map((c) => ({ value: c.slug, label: c.labels.plural })),
+        admin: {},
+    });
+    const options = {
+        name: "options",
+        type: "array",
+        label: "Options",
+        labels: { singular: "Option", plural: "Options" },
+        fields: [{ type: "row", fields: [half(txt("value", "Value", { required: true })), half(txt("label", "Label"))] }],
+        admin: {},
+    };
+    const help = { type: "row", fields: [half(txt("description", "Help text")), half(txt("width", "Width", { admin: { placeholder: "50%" } }))] };
+    const placeholder = txt("placeholder", "Placeholder");
+    const defaultValue = (extra = {}) => txt("defaultValue", "Default Value", extra);
+    const specific = {
+        text: [flags(true), placeholder, defaultValue()],
+        textarea: [flags(true), placeholder, defaultValue()],
+        richText: [flags(true)],
+        button: [
+            flags(true),
+            {
+                type: "row",
+                fields: [
+                    half(txt("placeholder", "Text placeholder", { admin: { placeholder: "e.g. Learn more" } })),
+                    half({
+                        name: "appearance",
+                        type: "select",
+                        label: "Default appearance",
+                        defaultValue: "primary",
+                        options: ["primary", "secondary", "outline", "link"].map((v) => ({ value: v, label: v[0].toUpperCase() + v.slice(1) })),
+                        admin: { isClearable: false },
+                    }),
+                ],
+            },
+        ],
+        image: [relationTo(true), flags(false)],
+        number: [flags(false), { type: "row", fields: [half(num("min", "Min")), half(num("max", "Max"))] }, defaultValue()],
+        checkbox: [defaultValue({ admin: { placeholder: "true / false" } })],
+        date: [flags(false)],
+        select: [flags(false), bool("hasMany", "Has Many"), options, defaultValue()],
+        relationship: [relationTo(false), flags(false), bool("hasMany", "Has Many")],
+        email: [flags(false), placeholder, defaultValue()],
+        list: [
+            flags(false),
+            { type: "row", fields: [half(txt("singular", "Item label", { admin: { placeholder: "e.g. Card" } })), half(bool("initCollapsed", "Initially collapsed"))] },
+            { type: "row", fields: [half(num("minRows", "Min items")), half(num("maxRows", "Max items"))] },
+            { ...nested, label: "Item components", admin: { ...nested.admin, description: "Components of each item of the list." } },
+        ],
+    };
+    for (const [type, label] of Object.entries(COMPONENT_LABELS)) {
+        blocks.push({ slug: type, labels: { singular: label, plural: label }, fields: [identity, ...specific[type], help] });
+    }
+    return nested;
+}
+
+/** "collection.field" of every blocks field (targets of the reusable blocks). */
+function blocksFieldOptions(config) {
+    const options = new Map();
+    const walk = (entity, fields, kind) => {
+        for (const field of fields || []) {
+            if (field.type === "blocks" && field.name) {
+                const value = `${entity.slug}.${field.name}`;
+                const label = `${kind === "global" ? entity.label : entity.labels.plural} › ${field.label || field.name}`;
+                options.set(value, { value, label });
+                for (const block of field.blocks || []) {
+                    if (!block.custom) {
+                        walk(entity, block.fields, kind);
+                    }
+                }
+            } else if (field.type === "tabs") {
+                for (const tab of field.tabs || []) {
+                    walk(entity, tab.fields, kind);
+                }
+            } else if (field.fields) {
+                walk(entity, field.fields, kind);
+            }
+        }
+    };
+    for (const c of config?.collections || []) {
+        walk(c, c.fields, "collection");
+    }
+    for (const g of config?.globals || []) {
+        walk(g, g.fields, "global");
+    }
+    return [...options.values()];
+}
+
+function blockFields(config) {
+    const collections = config?.collections || [];
+    return [
+        { type: "row", fields: [half(txt("label", "Label", { required: true, admin: { placeholder: "e.g. Hero" } })), half(txt("labelPlural", "Plural Label"))] },
+        { name: "description", type: "textarea", label: "Description", admin: { description: "Shown to the editors when they add the block." } },
+        {
+            name: "targets",
+            type: "select",
+            label: "Available in",
+            hasMany: true,
+            defaultValue: ["pages.layout"],
+            options: blocksFieldOptions(config),
+            admin: { description: "Blocks fields where editors can add this block (e.g. the layout of Pages)." },
+        },
+        bool("sectionHeader", "Section header", { defaultValue: true, admin: { description: "Starts the block with a title (required), a subtitle and a description." } }),
+        { ...buildComponentBlocks(collections), admin: { initCollapsed: false, rowLabelField: "name", rowLabelFallback: "label", description: "Elementary components assembled in the block, in display order." } },
+        txt("slug", "Slug", { required: true, admin: { position: "sidebar", placeholder: "e.g. hero", description: "blockType stored in the rows. Renaming it detaches the rows already written." } }),
+        bool("active", "Active", { defaultValue: true, admin: { position: "sidebar", description: "Archived blocks can no longer be added." } }),
+        num("componentCount", "Components", { admin: { position: "sidebar", readOnly: true } }),
+        num("usageCount", "Used by documents", { admin: { position: "sidebar", readOnly: true } }),
+    ];
 }
 
 function collectionFields(kind, collections) {
@@ -283,6 +463,20 @@ export function configCollection(slug, config) {
                     : "Collections are groups of documents sharing the same fields, exposed on /api/{slug}.",
             },
             fields: collectionFields(kind, collections),
+        };
+    } else if (section === "blocks") {
+        result = {
+            ...base,
+            labels: { singular: "Block", plural: "Blocks" },
+            label: "Blocks",
+            defaultSort: "label",
+            admin: {
+                useAsTitle: "label",
+                defaultColumns: ["label", "slug", "targets", "componentCount", "usageCount", "updatedAt"],
+                listSearchableFields: ["label", "slug"],
+                description: "Reusable blocks assembled from elementary components (text, rich text, button, image, list…), used to build the sections of the pages.",
+            },
+            fields: blockFields(config),
         };
     } else if (section === "fields") {
         result = {

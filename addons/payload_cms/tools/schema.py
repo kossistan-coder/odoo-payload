@@ -81,6 +81,16 @@ def apply_defaults(fields, data):
         ftype = field['type']
         if ftype == 'group':
             data[name] = apply_defaults(field.get('fields') or [], data.get(name) or {})
+        elif ftype in ('array', 'blocks') and isinstance(data.get(name), list):
+            # defaults of the rows too (Payload fills them when a row is added)
+            blocks = {b['slug']: b for b in field.get('blocks') or []}
+            rows = []
+            for row in data[name]:
+                if isinstance(row, dict):
+                    sub = field.get('fields') if ftype == 'array' else (blocks.get(row.get('blockType')) or {}).get('fields')
+                    row = apply_defaults(sub or [], row)
+                rows.append(row)
+            data[name] = rows
         elif name not in data or data[name] is None:
             if 'defaultValue' in field:
                 data[name] = field['defaultValue']
@@ -230,6 +240,10 @@ def validate(fields, data, path='', required=True):
             errors.append({'path': fpath, 'message': 'This field is required.', 'label': field.get('label')})
             continue
         if value in (None, ''):
+            continue
+        if field.get('pattern') and isinstance(value, str) and not re.fullmatch(field['pattern'], value):
+            errors.append({'path': fpath, 'label': field.get('label'),
+                           'message': field.get('patternMessage') or '"%s" does not match the expected format.' % value})
             continue
         if ftype == 'email' and not EMAIL_RE.match(value):
             errors.append({'path': fpath, 'message': 'Please enter a valid email address.', 'label': field.get('label')})
@@ -566,3 +580,25 @@ def delocalize(old_fields, new_fields, data, codes, default):
                 rows.append(row)
             result[name] = rows
     return result, changed
+
+
+class _Blank(dict):
+    def __missing__(self, key):
+        return ''
+
+
+def apply_computed(fields, data):
+    """Fields with a ``compute`` template (``"{nom} {prenom}"``) get their value
+    from the other top-level fields of the document."""
+    if not isinstance(data, dict):
+        return data
+    for field in data_fields(fields):
+        template = field.get('compute')
+        if not template:
+            continue
+        values = _Blank({k: ('' if v is None else v) for k, v in data.items() if not isinstance(v, (dict, list))})
+        try:
+            data[field['name']] = ' '.join(template.format_map(values).split()) or None
+        except (ValueError, KeyError, IndexError):
+            continue
+    return data

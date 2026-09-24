@@ -111,7 +111,11 @@ export function validate(fields, data, path = "", errors = {}) {
             errors[fpath] = "This field is required.";
             continue;
         }
-        if (value === undefined || value === null || value === "") {
+ if (value === undefined || value === null || value === "") {
+            continue;
+        }
+        if (field.pattern && typeof value === "string" && !new RegExp(`^(?:${field.pattern})$`).test(value)) {
+            errors[fpath] = field.patternMessage || `"${value}" does not match the expected format.`;
             continue;
         }
         if (field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {

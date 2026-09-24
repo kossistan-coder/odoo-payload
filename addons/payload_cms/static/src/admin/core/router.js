@@ -22,6 +22,10 @@ function parse(pathname, search) {
         route.name = "logout";
     } else if (seg[0] === "account" && seg.length === 1) {
         route.name = "account";
+    } else if (seg[0] === "x" && seg.length >= 2) {
+        // views registered by the modules (core/extensions.js)
+        route.name = "extension";
+        route.params = { path: seg.slice(1).join("/") };
     } else if (seg[0] === "collections" && seg.length >= 2) {
         const [, slug, id, view, versionId] = seg;
         route.params = { slug, kind: "collection" };
@@ -40,12 +44,12 @@ function parse(pathname, search) {
                 route.name = "apiView";
             }
         }
-    } else if (seg[0] === "config" && ["localization", "multitenancy", "api-docs"].includes(seg[1]) && seg.length === 2) {
+    } else if (seg[0] === "config" && ["localization", "multitenancy", "storage", "api-docs"].includes(seg[1]) && seg.length === 2) {
         route.name = "edit";
         route.params = { slug: `_config_${seg[1].replace("-", "_")}`, kind: "global", id: null };
     } else if (seg[0] === "api-docs" && seg.length === 1) {
         route.name = "apiDocs";
-    } else if (seg[0] === "config" && seg.length >= 2 && ["collections", "globals", "fields"].includes(seg[1])) {
+    } else if (seg[0] === "config" && seg.length >= 2 && ["collections", "globals", "blocks", "fields"].includes(seg[1])) {
         const [, section, id] = seg;
         route.params = { slug: `_config_${section}`, kind: "collection" };
         if (!id) {

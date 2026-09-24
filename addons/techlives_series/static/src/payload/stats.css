@@ -1,0 +1,13 @@
+/* Uses the theme tokens of the admin: works in light and dark mode */
+.techlives-stats__header { padding: calc(var(--base) * 2) 0 var(--base); }
+.techlives-stats__header h1 { margin: 0; }
+.techlives-stats__cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--base); list-style: none; padding: 0; margin: 0 0 calc(var(--base) * 2); }
+.techlives-stats__card { display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: var(--theme-text); }
+.techlives-stats__value { font-size: 32px; font-weight: 600; line-height: 1.1; }
+.techlives-stats__label { color: var(--theme-elevation-600); }
+.techlives-stats__title { margin: 0 0 var(--base); }
+.techlives-stats__error { color: var(--theme-error-500); }
+.techlives-next-live { display: flex; flex-direction: column; gap: 6px; }
+.techlives-next-live__eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--theme-elevation-500); }
+.techlives-next-live__title { font-size: 18px; font-weight: 600; color: var(--theme-text); }
+.techlives-next-live__more { font-size: 13px; color: var(--theme-elevation-600); }

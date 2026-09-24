@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="techlives_series.StatsView">
+        <div class="gutter gutter--left gutter--right techlives-stats">
+            <header class="techlives-stats__header">
+                <h1>Statistiques</h1>
+                <p class="field-description">Chiffres clés du site Tech Lives Series.</p>
+            </header>
+            <p t-if="state.loading" class="field-description">Chargement…</p>
+            <p t-elif="state.error" class="techlives-stats__error" t-esc="state.error"/>
+            <t t-else="">
+                <ul class="collections__card-list techlives-stats__cards">
+                    <li t-foreach="state.counts" t-as="item" t-key="item.label">
+                        <a class="card techlives-stats__card" t-att-href="item.href">
+                            <span class="techlives-stats__value" t-esc="item.value"/>
+                            <span class="techlives-stats__label" t-esc="item.label"/>
+                        </a>
+                    </li>
+                </ul>
+                <h2 class="techlives-stats__title">Prochains lives</h2>
+                <p t-if="!state.upcoming.length" class="field-description">Aucun live programmé.</p>
+                <div t-else="" class="table">
+                    <table cellpadding="0" cellspacing="0">
+                        <thead><tr><th>Live</th><th>Date</th><th>Heure</th><th>Intervenants</th></tr></thead>
+                        <tbody>
+                            <tr t-foreach="state.upcoming" t-as="live" t-key="live.id">
+                                <td><a t-att-href="'/admin/collections/events/' + live.id" t-esc="live.designation"/></td>
+                                <td t-esc="live.date_sortie"/>
+                                <td t-esc="live.time"/>
+                                <td t-esc="speakersOf(live)"/>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </div>
+    </t>
+
+    <t t-name="techlives_series.NextLiveWidget">
+        <div class="card techlives-next-live">
+            <span class="techlives-next-live__eyebrow">Prochain live</span>
+            <t t-if="state.live">
+                <a class="techlives-next-live__title" t-att-href="'/admin/collections/events/' + state.live.id" t-esc="state.live.designation"/>
+                <span class="field-description" t-esc="state.live.date_sortie + ' · ' + state.live.time"/>
+            </t>
+            <span t-elif="state.loaded" class="field-description">Aucun live programmé.</span>
+            <a class="techlives-next-live__more" href="/admin/x/statistiques">Voir les statistiques →</a>
+        </div>
+    </t>
+
+</templates>

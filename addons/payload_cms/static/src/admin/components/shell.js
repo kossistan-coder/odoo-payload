@@ -5,6 +5,7 @@ import { api, ApiError } from "../core/api";
 import { t } from "../core/i18n";
 import { EMBEDDED, goBack, navigate, router } from "../core/router";
 import { currentLocale, dismissToast, getCollection, loadSession, localization, multitenancy, navGroups, setLocale, setTenant, store, toast } from "../core/store";
+import { theme, toggleTheme } from "../core/theme";
 import { icon, md5 } from "../core/utils";
 import { AnimateHeight, Button, FieldError, Popup, PopupButton, Select } from "./base";
 
@@ -45,6 +46,8 @@ export class Nav extends Component {
         this.icon = icon;
         this.t = t;
         this.embedded = EMBEDDED;
+        this.theme = useState(theme);
+        this.toggleTheme = toggleTheme;
     }
 
     get groups() {
@@ -249,6 +252,7 @@ export class Toaster extends Component {
     setup() {
         this.store = useState(store);
         this.state = useState({ expanded: false });
+        this.theme = useState(theme);
         this.icon = icon;
         this.dismiss = dismissToast;
     }

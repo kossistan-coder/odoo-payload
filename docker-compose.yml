@@ -39,6 +39,18 @@ services:
       - PORT=5432
       - USER=${POSTGRES_USER:-odoo}
       - PASSWORD=${POSTGRES_PASSWORD:-odoo_secure_password_123}
+      # Stockage des fichiers de payload_cms (vide = stockage natif Odoo, sinon "s3").
+      # Les variables non vides priment sur Configuration → Storage (voir addons/payload_cms/README.md).
+      - PAYLOAD_STORAGE=${PAYLOAD_STORAGE:-}
+      - PAYLOAD_S3_ENDPOINT=${PAYLOAD_S3_ENDPOINT:-}
+      - PAYLOAD_S3_REGION=${PAYLOAD_S3_REGION:-}
+      - PAYLOAD_S3_BUCKET=${PAYLOAD_S3_BUCKET:-}
+      - PAYLOAD_S3_ACCESS_KEY=${PAYLOAD_S3_ACCESS_KEY:-}
+      - PAYLOAD_S3_SECRET_KEY=${PAYLOAD_S3_SECRET_KEY:-}
+      - PAYLOAD_S3_PREFIX=${PAYLOAD_S3_PREFIX:-}
+      - PAYLOAD_S3_ADDRESSING=${PAYLOAD_S3_ADDRESSING:-}
+      - PAYLOAD_S3_PUBLIC_URL=${PAYLOAD_S3_PUBLIC_URL:-}
+      - PAYLOAD_S3_DELIVERY=${PAYLOAD_S3_DELIVERY:-}
     volumes:
       - odoo_data:/var/lib/odoo
       - ./config/odoo.conf:/etc/odoo/odoo.conf:ro
@@ -68,6 +80,54 @@ services:
     networks:
       - odoo-network
 
+  # ==========================================
+  # Stockage objet S3 (MinIO), optionnel
+  # docker compose up -d minio createbuckets
+  # ==========================================
+  minio:
+    image: quay.io/minio/minio:${MINIO_VERSION:-latest}
+    container_name: odoo_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "${MINIO_API_PORT:-9010}:9000"
+      - "${MINIO_CONSOLE_PORT:-9011}:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minio_secure_password_123}
+    volumes:
+      - minio_data:/data
+    networks:
+      - odoo-network
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    profiles: ["minio"]
+
+  # Crée le bucket (et le rend lisible anonymement si MINIO_PUBLIC_BUCKET=true)
+  createbuckets:
+    image: quay.io/minio/mc:${MINIO_MC_VERSION:-latest}
+    container_name: odoo_minio_createbuckets
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minio_secure_password_123}
+      - BUCKET=${PAYLOAD_S3_BUCKET:-payload-media}
+      - PUBLIC_BUCKET=${MINIO_PUBLIC_BUCKET:-false}
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD &&
+      mc mb --ignore-existing local/$$BUCKET &&
+      if [ \"$$PUBLIC_BUCKET\" = true ]; then mc anonymous set download local/$$BUCKET; fi
+      "
+    networks:
+      - odoo-network
+    profiles: ["minio"]
+
 # ==========================================
 # Volumes persistants
 # ==========================================
@@ -78,6 +138,8 @@ volumes:
     name: odoo_filestore_data
   pgadmin_data:
     name: odoo_pgadmin_data
+  minio_data:
+    name: odoo_minio_data
 
 # ==========================================
 # Réseau Docker

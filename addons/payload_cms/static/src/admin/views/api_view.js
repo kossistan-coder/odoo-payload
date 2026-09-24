@@ -50,6 +50,35 @@ export class RenderJSON extends Component {
 }
 RenderJSON.components = { RenderJSON };
 
+/** Default `web_read` specification: every field of the document, relations as {id, display_name}. */
+function defaultSpecification(fields) {
+    const spec = {};
+    const walk = (list) => {
+        for (const field of list || []) {
+            if (["row", "collapsible"].includes(field.type)) {
+                walk(field.fields);
+            } else if (field.type === "tabs") {
+                for (const tab of field.tabs || []) {
+                    if (tab.name) {
+                        spec[tab.name] = {};
+                    } else {
+                        walk(tab.fields);
+                    }
+                }
+            } else if (field.name && !field.admin?.hidden) {
+                spec[field.name] = {};
+            }
+        }
+    };
+    walk(fields);
+    return spec;
+}
+
+/**
+ * API tab of a document: the document read like the API of the site reads it
+ * (`web_read` of /payload/dataset/call_kw, Odoo shapes), the specification of the
+ * fields, the calls to copy, and the documented routes of the collection.
+ */
 export class ApiView extends Component {
     static template = "payload.ApiView";
     static components = { DocumentHeader, CheckboxInput, RenderJSON };
@@ -57,9 +86,13 @@ export class ApiView extends Component {
     setup() {
         this.t = t;
         this.icon = icon;
-        this.state = useState({ data: null, depth: 2, draft: false, authenticated: true, fullscreen: false, versionCount: 0 });
+        this.store = store;
+        this.state = useState({
+            data: null, error: null, draft: false, authenticated: true, fullscreen: false, versionCount: 0,
+            specText: JSON.stringify(defaultSpecification(this.config.fields), null, 2), routes: [],
+        });
         onWillStart(async () => {
-            await this.fetch();
+            await Promise.all([this.fetch(), this.loadRoutes()]);
             if (this.config.versions?.enabled) {
                 const res = this.isGlobal
                     ? await api.get(`/globals/${this.params.slug}/versions`, { limit: 1 })
@@ -86,20 +119,55 @@ export class ApiView extends Component {
         return this.isGlobal ? `/admin/globals/${this.params.slug}` : `/admin/collections/${this.params.slug}/${this.params.id}`;
     }
 
-    get fetchURL() {
-        const path = this.isGlobal ? `/api/globals/${this.params.slug}` : `/api/${this.params.slug}/${this.params.id}`;
-        const params = new URLSearchParams({ depth: String(this.state.depth), draft: String(this.state.draft), trash: "false" });
-        if (store.locale) {
-            params.set("locale", store.locale);
+    get specification() {
+        try {
+            return JSON.parse(this.state.specText || "{}");
+        } catch {
+            return null;
         }
-        return `${window.location.origin}${path}?${params}`;
+    }
+
+    get context() {
+        const context = {};
+        if (this.state.draft) {
+            context.draft = true;
+        }
+        if (store.locale) {
+            context.lang = store.locale;
+        }
+        return context;
+    }
+
+    get rpcParams() {
+        const kwargs = { specification: this.specification || {} };
+        if (Object.keys(this.context).length) {
+            kwargs.context = this.context;
+        }
+        return { model: this.params.slug, method: "web_read", args: [this.isGlobal ? [] : [Number(this.params.id)]], kwargs };
+    }
+
+    get rpcURL() {
+        return `${window.location.origin}/payload/dataset/call_kw`;
+    }
+
+    get curl() {
+        const body = JSON.stringify({ jsonrpc: "2.0", method: "call", params: this.rpcParams });
+        return `curl -X POST ${this.rpcURL} -H 'Content-Type: application/json' -d '${body.replace(/'/g, "'\\''")}'`;
+    }
+
+    get python() {
+        const spec = JSON.stringify(this.specification || {}, null, 4).replace(/\btrue\b/g, "True").replace(/\bfalse\b/g, "False").replace(/\bnull\b/g, "None");
+        const ctx = Object.keys(this.context).length
+            ? `.with_context(${Object.entries(this.context).map(([k, v]) => `${k}=${typeof v === "string" ? `'${v}'` : "True"}`).join(", ")})`
+            : "";
+        return `from odoo.addons.payload_cms.payload import Model\n\nModel(env, '${this.params.slug}')${ctx}.web_read(${this.isGlobal ? "[]" : `[${this.params.id}]`}, ${spec})`;
     }
 
     get title() {
         if (this.isGlobal) {
             return this.config.label;
         }
-        return docTitle(this.config, this.state.data || {}) || String(this.params.id);
+        return this.state.data?.display_name || docTitle(this.config, this.state.data || {}) || String(this.params.id);
     }
 
     get headerProps() {
@@ -126,17 +194,37 @@ export class ApiView extends Component {
     }
 
     async fetch() {
+        if (!this.specification) {
+            this.state.error = "The specification is not valid JSON.";
+            return;
+        }
         try {
-            const response = await fetch(this.fetchURL, { credentials: this.state.authenticated ? "include" : "omit", headers: { "Accept-Language": "en" } });
-            this.state.data = await response.json();
+            const response = await fetch(this.rpcURL, {
+                method: "POST",
+                credentials: this.state.authenticated ? "include" : "omit",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ jsonrpc: "2.0", method: "call", params: this.rpcParams }),
+            });
+            const res = await response.json();
+            if (res.error) {
+                this.state.error = res.error.data?.message || res.error.message;
+                this.state.data = null;
+            } else {
+                this.state.error = null;
+                this.state.data = res.result?.[0] || {};
+            }
         } catch (e) {
-            toast.error(e.message);
+            this.state.error = e.message;
         }
     }
 
-    setDepth(ev) {
-        this.state.depth = Math.max(0, Math.min(10, Number(ev.target.value) || 0));
-        this.fetch();
+    async loadRoutes() {
+        try {
+            const res = await api.get("/_admin/routes", { model: this.params.slug });
+            this.state.routes = res.routes || [];
+        } catch {
+            this.state.routes = [];
+        }
     }
 
     setFlag(name, value) {
@@ -144,8 +232,17 @@ export class ApiView extends Component {
         this.fetch();
     }
 
-    async copy() {
-        await navigator.clipboard?.writeText(this.fetchURL);
+    onSpecInput(ev) {
+        this.state.specText = ev.target.value;
+    }
+
+    resetSpec() {
+        this.state.specText = JSON.stringify(defaultSpecification(this.config.fields), null, 2);
+        this.fetch();
+    }
+
+    async copy(text) {
+        await navigator.clipboard?.writeText(text);
         toast.success(t("general:copied"));
     }
 }

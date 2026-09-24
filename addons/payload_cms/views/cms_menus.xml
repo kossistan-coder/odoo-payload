@@ -3,7 +3,7 @@
     <!--
         payload_cms is a building block: it defines no menu of its own.
         The modules that depend on it add the menus they need, using these actions
-        (see palais_lome/views/menus.xml).
+        (see techlives_series/views/menus.xml).
     -->
 
     <!-- Payload admin embedded in the Odoo web client (navbar / apps menu stay visible) -->
@@ -23,6 +23,11 @@
         <field name="tag">payload_cms.admin</field>
         <field name="params" eval="{'path': '/config/globals'}"/>
     </record>
+    <record id="action_payload_config_blocks" model="ir.actions.client">
+        <field name="name">Blocks</field>
+        <field name="tag">payload_cms.admin</field>
+        <field name="params" eval="{'path': '/config/blocks'}"/>
+    </record>
     <record id="action_payload_config_fields" model="ir.actions.client">
         <field name="name">Fields</field>
         <field name="tag">payload_cms.admin</field>
@@ -37,6 +42,11 @@
         <field name="name">Multisite</field>
         <field name="tag">payload_cms.admin</field>
         <field name="params" eval="{'path': '/config/multitenancy'}"/>
+    </record>
+    <record id="action_payload_config_storage" model="ir.actions.client">
+        <field name="name">Storage</field>
+        <field name="tag">payload_cms.admin</field>
+        <field name="params" eval="{'path': '/config/storage'}"/>
     </record>
     <record id="action_payload_config_api_docs" model="ir.actions.client">
         <field name="name">API Docs</field>

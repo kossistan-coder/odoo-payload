@@ -30,7 +30,8 @@ const INTERVALS = [
     { value: "quarter", label: "Quarter" },
     { value: "year", label: "Year" },
 ];
-const PALETTE = ["#2f2f2f", "#6b8afd", "#4caf82", "#f2b441", "#e0675c", "#8c6bd9", "#3fb3c4", "#a3a3a3", "#d96ba5", "#7a9a3d"];
+// The first colour follows the theme (dark grey on light, light grey on dark).
+const PALETTE = ["var(--theme-elevation-800)", "#6b8afd", "#4caf82", "#f2b441", "#e0675c", "#8c6bd9", "#3fb3c4", "#a3a3a3", "#d96ba5", "#7a9a3d"];
 
 function statusField() {
     return { name: "_status", type: "select", label: "Status", options: [{ value: "draft", label: "Draft" }, { value: "published", label: "Published" }] };

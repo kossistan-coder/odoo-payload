@@ -3,7 +3,7 @@ import logging
 import re
 
 from odoo import api, fields, models, _
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 
 from ..tools import multitenancy, schema
 
@@ -110,6 +110,13 @@ class CmsCollection(models.Model):
     _sql_constraints = [
         ('slug_unique', 'unique(slug, kind)', "The slug must be unique."),
     ]
+
+    def unlink(self):
+        # seeders (payload.Seeder) only create / update: never delete
+        if self.env.context.get('payload_seeder'):
+            raise UserError(_("Seeder '%s': deleting CMS data is not allowed (seeders only create or update).",
+                              self.env.context['payload_seeder']))
+        return super().unlink()
 
     @api.depends('all_field_ids')
     def _compute_field_count(self):
@@ -352,11 +359,12 @@ class CmsCollection(models.Model):
     def _payload_sync_code(self, force=False):
         """Create / update the collections declared as Python classes by the
         installed modules (only when their definition changed)."""
-        from ..payload import registered
+        from ..payload import registered, registered_blocks, registered_seeders
         classes = registered()
-        if not classes:
+        if not classes and not registered_blocks() and not registered_seeders():
             return
-        modules = {cls._module for cls in classes}
+        modules = ({cls._module for cls in classes} | {b._module for b in registered_blocks()}
+                   | {s._module for s in registered_seeders()})
         installed = set(self.env['ir.module.module'].sudo().search(
             [('name', 'in', list(modules)), ('state', 'in', ('installed', 'to upgrade', 'to install'))]).mapped('name'))
         classes = sorted((c for c in classes if c._module in installed), key=lambda c: (c._kind, c._sequence, c._name))
@@ -367,6 +375,7 @@ class CmsCollection(models.Model):
                 spec = dict(cls._spec(), fields=[])
                 Collection._sync_schema([spec])
         # 2. schema of the changed classes
+        registered_keys = {(c._kind, c._name) for c in classes}
         for cls in classes:
             record = Collection.search([('slug', '=', cls._name), ('kind', '=', cls._kind)], limit=1)
             digest = cls._hash()
@@ -375,6 +384,89 @@ class CmsCollection(models.Model):
             _logger.info("Payload CMS: synchronising %s '%s' from module %s", cls._kind, cls._name, cls._module)
             Collection._sync_schema([cls._spec()])
             record.write({'code_module': cls._module, 'code_hash': digest})
+        # 3. classes removed from the code of a loaded module: drop their (empty) collection
+        loaded_modules = {c._module for c in registered()}
+        for record in Collection.search([('code_module', 'in', list(loaded_modules))]):
+            if (record.kind, record.slug) in registered_keys:
+                continue
+            if record.document_ids:
+                _logger.warning("Payload CMS: %s '%s' is no longer defined in %s but has documents: kept",
+                                record.kind, record.slug, record.code_module)
+                continue
+            _logger.info("Payload CMS: removing %s '%s' (no longer defined in %s)", record.kind, record.slug, record.code_module)
+            record.unlink()
+        # 4. layout blocks added to existing blocks fields (payload.Block)
+        self._payload_sync_blocks(installed)
+        # 5. starter content (payload.Seeder), once per database
+        self._payload_run_seeders(installed=installed)
+
+    @api.model
+    def _payload_run_seeders(self, force=False, names=None, installed=None):
+        """Run the seeders of the installed modules that never ran (``force``:
+        run them again; ``names``: only these ``module.name``)."""
+        from ..payload import registered_seeders
+        Param = self.env['ir.config_parameter'].sudo()
+        if installed is None:
+            installed = set(self.env['ir.module.module'].sudo().search(
+                [('state', 'in', ('installed', 'to upgrade', 'to install'))]).mapped('name'))
+        done = []
+        for cls in sorted(registered_seeders(), key=lambda s: (s._module, s._sequence, s._name)):
+            if cls._module not in installed or (names and '%s.%s' % (cls._module, cls._name) not in names):
+                continue
+            if not force and Param.get_param(cls._key()):
+                continue
+            try:
+                with self.env.cr.savepoint():
+                    # payload_seeder: any deletion of CMS data raises (seeders only create / update)
+                    cls().run(self.env(context=dict(self.env.context, payload_seeder='%s.%s' % (cls._module, cls._name))))
+                    Param.set_param(cls._key(), fields.Datetime.now().isoformat())
+                _logger.info("Payload CMS: seeder %s.%s done", cls._module, cls._name)
+                done.append('%s.%s' % (cls._module, cls._name))
+            except Exception:  # noqa: BLE001 - a seeder never blocks the server
+                _logger.exception("Payload CMS: seeder %s.%s failed", cls._module, cls._name)
+        return done
+
+    @api.model
+    def _payload_sync_blocks(self, installed):
+        from ..payload import registered_blocks
+        Field = self.env['cms.field.definition'].sudo()
+        Collection = self.sudo().with_context(active_test=False)
+        code_blocks = Field.search([('field_type', '=', 'block')]).filtered(lambda f: (f.config or {}).get('code_module'))
+        keep = set()
+        blocks = sorted((b for b in registered_blocks() if b._module in installed), key=lambda b: (b._sequence, b._name))
+        for cls in blocks:
+            for slug, field_name in cls._targets():
+                collection = Collection.search([('slug', '=', slug)], limit=1)
+                parent = collection.all_field_ids.filtered(lambda f: f.name == field_name and f.field_type == 'blocks')[:1]
+                if not parent:
+                    _logger.warning("Payload CMS: block '%s' of %s: no blocks field '%s.%s'", cls._name, cls._module, slug, field_name)
+                    continue
+                existing = parent.child_ids.filtered(lambda f: f.name == cls._name)
+                digest = cls._hash()
+                if len(existing) == 1 and (existing.config or {}).get('code_hash') == digest:
+                    keep.add(existing.id)
+                    continue
+                sequence = (existing[:1].sequence if existing else max(parent.child_ids.mapped('sequence') or [0]) + 10)
+                existing.unlink()
+                _logger.info("Payload CMS: synchronising block '%s' of %s in %s.%s", cls._name, cls._module, slug, field_name)
+                spec = cls._spec()
+                block = Field.create({
+                    'collection_id': collection.id,
+                    'parent_id': parent.id,
+                    'sequence': sequence,
+                    'name': spec['slug'],
+                    'label': spec['labels']['singular'],
+                    'field_type': 'block',
+                    'config': {'code_module': cls._module, 'code_hash': digest},
+                })
+                Field._create_from_spec(collection, spec['fields'], block)
+                keep.add(block.id)
+        # blocks whose class disappeared (module uninstalled / class removed)
+        loaded_modules = {b._module for b in registered_blocks()} | set(installed)
+        for field in code_blocks.exists():
+            if field.id not in keep and field.config.get('code_module') in loaded_modules:
+                _logger.info("Payload CMS: removing block '%s' (no longer defined in %s)", field.name, field.config.get('code_module'))
+                field.unlink()
 
     @api.model
     def _payload_default_sequences(self):

@@ -1,0 +1,70 @@
+[{
+	"_id": {
+		"$oid": "6ab15fc32c9eebe604f63a00"
+	},
+	"banner": {
+		"$oid": "6ab15f8e9969ca11ece729b9"
+	},
+	"recentsEvent": [
+		{
+			"$oid": "6ab15f8e9969ca11ece729b4"
+		},
+		{
+			"$oid": "6ab15f8e9969ca11ece729b9"
+		},
+		{
+			"$oid": "6ab15f8e9969ca11ece729be"
+		}
+	],
+	"speakers": [
+		{
+			"$oid": "6ab15f6f9969ca11ece72931"
+		},
+		{
+			"$oid": "6ab15f8e9969ca11ece72993"
+		},
+		{
+			"$oid": "6ab15f8e9969ca11ece72995"
+		},
+		{
+			"$oid": "6ab15f8e9969ca11ece72997"
+		},
+		{
+			"$oid": "6ab15f8e9969ca11ece72999"
+		},
+		{
+			"$oid": "6ab15f8e9969ca11ece7299b"
+		},
+		{
+			"$oid": "6ab15f8e9969ca11ece7299d"
+		},
+		{
+			"$oid": "6ab15f8e9969ca11ece7299f"
+		}
+	],
+	"proposBanner": {
+		"image": "CDP2_speakers.jpg",
+		"text": {
+			"title": "À propos des Tech Lives Series",
+			"description": "Un rendez-vous mensuel qui réunit des professionnels du numérique autour des sujets qui transforment les usages et les métiers."
+		}
+	},
+	"episodeTextBanner": {
+		"title": "Nos épisodes",
+		"description": "Retrouvez l'intégralité des sessions déjà diffusées, en replay et à votre rythme."
+	},
+	"speakerTextBanner": {
+		"title": "Nos intervenants",
+		"description": "Des praticiens qui partagent sans détour leurs retours d'expérience, leurs réussites et leurs échecs."
+	},
+	"organizerTextBanner": {
+		"title": "Nos organisateurs",
+		"description": "La série est portée par un collectif de structures publiques et privées engagées sur le numérique."
+	},
+	"communityTextBanner": {
+		"title": "Rejoignez la communauté",
+		"description": "Échangez avec les intervenants et les autres participants entre deux épisodes."
+	},
+	"__v": 0
+}]
+

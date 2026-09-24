@@ -13,6 +13,18 @@ import { debounce, docTitle, formatDate, formatFilesize, icon, lexicalToText, ro
 import { AnimateHeight, Button, CheckboxInput, Pill, Popup, PopupButton, Select, Thumbnail } from "../components/base";
 
 const PER_PAGE = [5, 10, 25, 50, 100];
+const BADGE_COLORS = ["success", "danger", "warning", "info", "primary", "muted"];
+
+/** Class / inline style of a badge: named colour (success, danger…) or any CSS colour. */
+function badgeView(badge, fallbackLabel) {
+    const color = badge.color || "muted";
+    const named = BADGE_COLORS.includes(color);
+    return {
+        label: badge.label || fallbackLabel,
+        className: `cms-badge cms-badge--${named ? color : "custom"}`,
+        style: named ? "" : `--cms-badge-color: ${color}`,
+    };
+}
 
 /** One table cell rendered like Payload's DefaultCell. */
 export class Cell extends Component {
@@ -51,6 +63,25 @@ export class Cell extends Component {
             classes = ["selected--changed"];
         }
         return { label: labels.join(", "), className: classes.join(" ") };
+    }
+
+    /** Coloured badges of a checkbox / select field declared with `admin.badges` (null: plain rendering). */
+    get badges() {
+        const badges = this.field.admin?.badges;
+        if (!badges || !["checkbox", "select", "radio"].includes(this.field.type)) {
+            return null;
+        }
+        if (this.field.type === "checkbox") {
+            const on = Boolean(this.value);
+            const badge = badges[String(on)];
+            return badge ? [badgeView(badge, on ? t("general:yes") : t("general:no"))] : null;
+        }
+        if (this.isEmpty) {
+            return null;
+        }
+        const options = this.field.options || [];
+        const values = Array.isArray(this.value) ? this.value : [this.value];
+        return values.map((v) => badgeView(badges[String(v)] || {}, options.find((o) => o.value === v)?.label || String(v)));
     }
 
     get relationText() {

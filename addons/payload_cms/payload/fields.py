@@ -23,6 +23,25 @@ Common parameters (all optional):
 ``placeholder``   input placeholder
 ``private``       hidden from anonymous API clients
 ``condition``     show the field only when ``{"field": "kind", "equals": "expo"}``
+``pattern``       regular expression the value must match (``pattern_message``: error)
+``compute``       template computed from the other fields: ``compute="{nom} {prenom}"`` (read only)
+``api_name``      name of the field in the Delivery API (default: the name in camelCase),
+                  e.g. ``designation = fields.Char("Désignation", api_name="title")``
+``role``          inside a block, ``'config'`` or ``'content'`` part of the Delivery API
+                  (default: select, radio, checkbox and number are config, the rest content)
+``component``     name of an input component registered by a module in the admin
+                  (``registerField("color", ColorField)``, see core/extensions.js)
+``badge``         Boolean / Selection: show the value as a coloured badge in the list and kanban views::
+
+                      active = fields.Boolean("Actif", badge=("Actif", "Archivé"))            # green / red
+                      active = fields.Boolean("Actif", badge={True: ("En ligne", "success"),
+                                                              False: ("Hors ligne", "muted")})
+                      state = fields.Selection([("draft", "Brouillon", "warning"),           # 3rd item = colour
+                                                ("done", "Publié", "success")], "État")
+                      kind = fields.Selection(KINDS, "Type", badge={"sponsor": "primary"})   # or badge=True
+
+                  colours: success (green), danger (red), warning (orange), info (blue),
+                  primary (purple), muted (grey), or a CSS colour ("#0ea5e9")
 
 Layout parameters (the admin form):
 
@@ -36,6 +55,16 @@ import itertools
 
 _counter = itertools.count()
 
+# colours given in turn by ``badge=True`` on a Selection
+BADGE_COLORS = ('info', 'primary', 'success', 'warning', 'danger', 'muted')
+
+
+def _badge(label=None, color=None):
+    badge = {'color': color or 'muted'}
+    if label:
+        badge['label'] = label
+    return badge
+
 LAYOUT_KEYS = ('tab', 'row', 'width', 'sidebar')
 
 
@@ -45,7 +74,8 @@ class Field:
 
     def __init__(self, string=None, required=False, default=None, help=None, translate=False, localized=False,
                  readonly=False, unique=False, placeholder=None, private=False, condition=None,
-                 tab=None, row=None, width=None, sidebar=False, hidden=False, name=None, admin=None, **extra):
+                 tab=None, row=None, width=None, sidebar=False, hidden=False, name=None, admin=None,
+                 pattern=None, pattern_message=None, compute=None, badge=None, component=None, api_name=None, role=None, **extra):
         self._order = next(_counter)
         self.string = string
         self.required = required
@@ -65,6 +95,18 @@ class Field:
         self.name = name  # API key (defaults to the attribute name)
         self.admin_extra = dict(admin or {})
         self.extra = extra
+        self.pattern, self.pattern_message = pattern, pattern_message
+        self.compute = compute
+        if compute:
+            self.readonly = True
+        self.badge = badge
+        self.component = component
+        self.api_name = api_name
+        self.role = role
+
+    def _badges(self):
+        """``admin.badges``: {"<value>": {"label": ..., "color": ...}} (see ``badge``)."""
+        return None
 
     # ------------------------------------------------------------------
     def _admin(self):
@@ -83,6 +125,11 @@ class Field:
             admin['position'] = 'sidebar'
         if self.condition:
             admin['condition'] = self.condition
+        if self.component:
+            admin['component'] = self.component
+        badges = self._badges()
+        if badges:
+            admin['badges'] = badges
         return admin
 
     def _type_spec(self):
@@ -103,6 +150,16 @@ class Field:
             spec['private'] = True
         if self.default is not None:
             spec['defaultValue'] = self.default
+        if self.pattern:
+            spec['pattern'] = self.pattern
+            if self.pattern_message:
+                spec['patternMessage'] = self.pattern_message
+        if self.compute:
+            spec['compute'] = self.compute
+        if self.api_name:
+            spec['apiName'] = self.api_name
+        if self.role:
+            spec['role'] = self.role
         spec.update(self._type_spec())
         spec.update(self.extra)
         admin = self._admin()
@@ -167,8 +224,25 @@ Number = Float
 
 
 class Boolean(Field):
-    """Checkbox."""
+    """Checkbox. ``badge=("Actif", "Inactif")`` shows a green / red badge in the lists."""
     type = 'checkbox'
+
+    def _badges(self):
+        badge = self.badge
+        if not badge:
+            return None
+        if badge is True:
+            badge = (None, None)
+        if isinstance(badge, (tuple, list)):
+            badge = {True: (badge[0], 'success'), False: (badge[1], 'danger')}
+        result = {}
+        for value, default_color in ((True, 'success'), (False, 'danger')):
+            item = badge.get(value)
+            if isinstance(item, str):
+                item = (item, default_color)
+            label, color = (tuple(item) + (None, None))[:2] if item else (None, None)
+            result['true' if value else 'false'] = _badge(label, color or default_color)
+        return result
 
 
 class Date(Field):
@@ -199,6 +273,17 @@ class Selection(Field):
         self.multiple = multiple
         if widget == 'radio':
             self.type = 'radio'
+
+    def _badges(self):
+        colors = {o[0]: o[2] for o in self.selection if isinstance(o, (tuple, list)) and len(o) > 2 and o[2]}
+        if isinstance(self.badge, dict):
+            colors.update(self.badge)
+        elif self.badge:
+            values = [o[0] if isinstance(o, (tuple, list)) else o.get('value') if isinstance(o, dict) else o
+                      for o in self.selection]
+            for index, value in enumerate(values):
+                colors.setdefault(value, BADGE_COLORS[index % len(BADGE_COLORS)])
+        return {str(value): _badge(color=color) for value, color in colors.items()} or None
 
     def _type_spec(self):
         options = [{'value': o[0], 'label': o[1]} if isinstance(o, (tuple, list)) else o for o in self.selection]

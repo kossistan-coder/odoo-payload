@@ -3,6 +3,7 @@
 import { reactive } from "@odoo/owl";
 import { api, setApiLocale, setApiTenant } from "./api";
 import { configCollection } from "./config_schema";
+import { extensions } from "./extensions";
 
 /**
  * Global reactive state of the admin: client config (collections/globals
@@ -126,7 +127,7 @@ const API_DOCS_GLOBAL = {
     apiPath: "/_admin/schema/api-docs",
     adminPath: "/admin/config/api-docs",
     versions: { enabled: false, drafts: false },
-    admin: { description: "Swagger UI and OpenAPI 3 specification generated automatically from the schema (/api-docs)." },
+    admin: { description: "Swagger UI and OpenAPI 3 specification (/api-docs) of the API routes written by your modules: the controller routes marked with @api_doc and the collection methods marked with @expose." },
     fields: [
         {
             type: "row",
@@ -144,14 +145,20 @@ const API_DOCS_GLOBAL = {
         },
         { name: "description", type: "textarea", label: "Description", admin: { description: "Markdown, shown at the top of the documentation." } },
         {
-            name: "collections",
+            name: "modules",
             type: "select",
             hasMany: true,
-            label: "Documented collections",
+            label: "Documented modules",
             options: [],
-            admin: { description: "Leave empty to document every collection and global." },
+            admin: { description: "Modules using payload_cms whose API is documented. Leave empty to document every module." },
         },
-        { name: "includeAuth", type: "checkbox", label: "Document the authentication endpoints" },
+        {
+            type: "row",
+            fields: [
+                { name: "includeRpc", type: "checkbox", label: "Document the generic JSON-RPC endpoint", admin: { width: "50%", description: "/payload/dataset/call_kw (search_read, web_search_read…)." } },
+                { name: "includeAuth", type: "checkbox", label: "Document the authentication endpoint", admin: { width: "50%", description: "Login returning a JWT (routes reserved to the CMS users)." } },
+            ],
+        },
         {
             name: "servers",
             type: "array",
@@ -177,6 +184,117 @@ const API_DOCS_GLOBAL = {
         },
     ],
 };
+
+/** Virtual global of the file storage settings (Configuration → Storage). */
+const S3 = { condition: { field: "backend", equals: "s3" } };
+const STORAGE_GLOBAL = {
+    slug: "_config_storage",
+    virtual: true,
+    label: "Storage",
+    labels: { singular: "Storage", plural: "Storage" },
+    apiPath: "/_admin/schema/storage",
+    adminPath: "/admin/config/storage",
+    versions: { enabled: false, drafts: false },
+    admin: {
+        description: "Where the files of the upload collections (media…) are stored: Odoo attachments, or an S3-compatible bucket (AWS S3, MinIO…). Existing files stay in the storage they were uploaded to.",
+    },
+    fields: [
+        {
+            name: "backend",
+            type: "radio",
+            label: "Storage",
+            defaultValue: "native",
+            options: [
+                { value: "native", label: "Odoo (attachments / filestore)" },
+                { value: "s3", label: "S3-compatible bucket (AWS S3, MinIO…)" },
+            ],
+            admin: { description: "New uploads go to this storage. The connection is checked on save." },
+        },
+        {
+            type: "row",
+            admin: S3,
+            fields: [
+                { name: "endpoint", type: "text", label: "Endpoint URL", admin: { width: "50%", placeholder: "http://minio:9000", description: "Empty for AWS S3 (https://s3.{region}.amazonaws.com)." } },
+                { name: "region", type: "text", label: "Region", admin: { width: "50%", placeholder: "us-east-1" } },
+            ],
+        },
+        {
+            type: "row",
+            admin: S3,
+            fields: [
+                { name: "bucket", type: "text", label: "Bucket", admin: { width: "50%", placeholder: "payload-media" } },
+                { name: "prefix", type: "text", label: "Path prefix", admin: { width: "50%", placeholder: "media", description: "Optional folder of the objects in the bucket." } },
+            ],
+        },
+        {
+            type: "row",
+            admin: S3,
+            fields: [
+                { name: "accessKey", type: "text", label: "Access key", admin: { width: "50%" } },
+                { name: "secretKey", type: "text", label: "Secret key", admin: { width: "50%", description: "Leave empty to keep the saved key." } },
+            ],
+        },
+        {
+            type: "row",
+            admin: S3,
+            fields: [
+                { name: "secretKeySet", type: "checkbox", label: "A secret key is saved", admin: { width: "50%", readOnly: true } },
+                { name: "clearSecretKey", type: "checkbox", label: "Remove the saved key", admin: { width: "50%" } },
+            ],
+        },
+        {
+            name: "addressing",
+            type: "radio",
+            label: "Addressing style",
+            defaultValue: "path",
+            options: [
+                { value: "path", label: "Path (endpoint/bucket/key, MinIO)" },
+                { value: "virtual", label: "Virtual host (bucket.endpoint/key)" },
+            ],
+            admin: S3,
+        },
+        {
+            name: "delivery",
+            type: "radio",
+            label: "File delivery",
+            defaultValue: "proxy",
+            options: [
+                { value: "proxy", label: "Through Odoo (/api/{collection}/file/{filename}, private bucket)" },
+                { value: "public", label: "Directly from the public URL of the bucket (or CDN)" },
+            ],
+            admin: { ...S3, description: "Direct delivery needs a publicly readable bucket: file URLs point to the public URL and /api/…/file/… redirects to it." },
+        },
+        { name: "publicUrl", type: "text", label: "Public base URL", admin: { ...S3, placeholder: "http://localhost:9010/payload-media", description: "Base URL of the objects (bucket URL or CDN), required for direct delivery." } },
+        {
+            type: "row",
+            fields: [
+                { name: "testConnection", type: "checkbox", label: "Test the S3 connection on save", admin: { width: "33%", description: "Always done when the S3 storage is selected." } },
+                { name: "createBucket", type: "checkbox", label: "Create the bucket if missing", admin: { width: "33%" } },
+                { name: "migrateExisting", type: "checkbox", label: "Move existing files to this storage", admin: { width: "33%", description: "On save, copies the files stored elsewhere, then deletes the originals." } },
+            ],
+        },
+        {
+            type: "row",
+            fields: [
+                { name: "nativeCount", type: "number", label: "Files in Odoo", admin: { width: "50%", readOnly: true } },
+                { name: "s3Count", type: "number", label: "Files in S3", admin: { width: "50%", readOnly: true } },
+            ],
+        },
+        { name: "envVariables", type: "text", label: "Set by environment variables", admin: { readOnly: true, description: "PAYLOAD_STORAGE and PAYLOAD_S3_* (docker compose / odoo.conf) override these settings and cannot be changed here." } },
+    ],
+};
+
+/** Storage settings whose fields set by environment variables are read-only. */
+let storageGlobal = { config: null, global: null };
+function withStorageLocks() {
+    if (storageGlobal.config !== store.config) {
+        const locked = new Set(store.config.storage?.envKeys || []);
+        const patch = (fields) =>
+            fields.map((f) => (locked.has(f.name) ? { ...f, admin: { ...f.admin, readOnly: true } } : f.fields ? { ...f, fields: patch(f.fields) } : f));
+        storageGlobal = { config: store.config, global: { ...STORAGE_GLOBAL, fields: patch(STORAGE_GLOBAL.fields) } };
+    }
+    return storageGlobal.global;
+}
 
 // ----------------------------------------------------------------------
 // Localization (Payload's `localization` config + locale selector)
@@ -409,9 +527,23 @@ export function getGlobal(slug) {
         return store.config?.isAdmin ? withCollectionOptions(MULTITENANCY_GLOBAL, "scopedCollections") : null;
     }
     if (slug === API_DOCS_GLOBAL.slug) {
-        return store.config?.isAdmin ? withCollectionOptions(API_DOCS_GLOBAL, "collections") : null;
+        return store.config?.isAdmin ? withModuleOptions() : null;
+    }
+    if (slug === STORAGE_GLOBAL.slug) {
+        return store.config?.isAdmin ? withStorageLocks() : null;
     }
     return store.config?.globals.find((g) => g.slug === slug) || null;
+}
+
+/** API Docs settings whose `modules` select lists the modules using payload_cms. */
+let moduleOptions = { config: null, global: null };
+function withModuleOptions() {
+    if (moduleOptions.config !== store.config) {
+        const options = store.config.apiDocs?.modules || [];
+        const patch = (fields) => fields.map((f) => (f.name === "modules" ? { ...f, options } : f.fields ? { ...f, fields: patch(f.fields) } : f));
+        moduleOptions = { config: store.config, global: { ...API_DOCS_GLOBAL, fields: patch(API_DOCS_GLOBAL.fields) } };
+    }
+    return moduleOptions.global;
 }
 
 /** Copy of a virtual global whose `name` select lists the collections & globals. */
@@ -479,8 +611,16 @@ export function navGroups() {
             href: `/admin/globals/${g.slug}`,
         });
     }
+    // views registered by the modules (core/extensions.js)
+    void extensions.views.length; // re-render the navigation when a module registers a view
+    for (const view of extensions.views) {
+        if (view.nav === false || (view.adminOnly && !store.config.isAdmin)) {
+            continue;
+        }
+        add(view.group, { type: "view", slug: `x-${view.path.replace(/\//g, "-")}`, label: view.label, href: `/admin/x/${view.path}` });
+    }
     if (store.config.isAdmin) {
-        for (const [section, label, singular] of [["collections", "Collections", "Collection"], ["globals", "Globals", "Global"], ["fields", "Fields", "Field"]]) {
+        for (const [section, label, singular] of [["collections", "Collections", "Collection"], ["globals", "Globals", "Global"], ["blocks", "Blocks", "Block"], ["fields", "Fields", "Field"]]) {
             add("Configuration", {
                 type: "collection",
                 slug: `_config_${section}`,
@@ -492,6 +632,7 @@ export function navGroups() {
         }
         add("Configuration", { type: "global", slug: LOCALIZATION_GLOBAL.slug, label: "Localization", href: "/admin/config/localization" });
         add("Configuration", { type: "global", slug: MULTITENANCY_GLOBAL.slug, label: "Multisite", href: "/admin/config/multitenancy" });
+        add("Configuration", { type: "global", slug: STORAGE_GLOBAL.slug, label: "Storage", href: "/admin/config/storage" });
         add("Configuration", { type: "global", slug: API_DOCS_GLOBAL.slug, label: "API Docs Settings", href: "/admin/config/api-docs" });
     }
     if (store.config.apiDocs?.enabled) {

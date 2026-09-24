@@ -46,18 +46,6 @@ DEFAULT_SCHEMA = [
         'fields': [
             {'name': 'title', 'type': 'text', 'required': True},
             {'type': 'tabs', 'tabs': [
-                {'label': 'Hero', 'fields': [
-                    {'name': 'hero', 'type': 'group', 'label': False, 'fields': [
-                        {'name': 'type', 'type': 'select', 'defaultValue': 'lowImpact', 'required': True,
-                         'options': [{'value': 'none', 'label': 'None'},
-                                     {'value': 'highImpact', 'label': 'High Impact'},
-                                     {'value': 'mediumImpact', 'label': 'Medium Impact'},
-                                     {'value': 'lowImpact', 'label': 'Low Impact'}]},
-                        {'name': 'richText', 'type': 'richText', 'label': 'Rich Text'},
-                        {'name': 'links', 'type': 'array', 'maxRows': 2, 'fields': LINK_FIELDS},
-                        {'name': 'media', 'type': 'upload', 'relationTo': 'media'},
-                    ]},
-                ]},
                 {'label': 'Content', 'fields': [
                     {'name': 'layout', 'type': 'blocks', 'required': True, 'blocks': [
                         {'slug': 'content', 'labels': {'singular': 'Content'}, 'fields': [

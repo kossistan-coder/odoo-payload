@@ -5,3 +5,5 @@ access_cms_field_definition_user,cms.field.definition.user,model_cms_field_defin
 access_cms_field_definition_admin,cms.field.definition.admin,model_cms_field_definition,group_payload_cms_admin,1,1,1,1
 access_cms_document_user,cms.document.user,model_cms_document,group_payload_cms_user,1,1,1,1
 access_cms_document_version_user,cms.document.version.user,model_cms_document_version,group_payload_cms_user,1,1,1,1
+access_cms_block_user,cms.block.user,model_cms_block,group_payload_cms_user,1,0,0,0
+access_cms_block_admin,cms.block.admin,model_cms_block,group_payload_cms_admin,1,1,1,1
