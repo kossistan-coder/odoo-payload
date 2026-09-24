@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Payload CMS',
-    'version': '18.0.2.0.0',
+    'version': '18.0.2.1.0',
     'category': 'Website/Content Management',
     'sequence': 10,
     'summary': 'Headless CMS for Odoo with the Payload CMS admin UI and REST API',
@@ -10,7 +10,7 @@ Payload CMS for Odoo
 ====================
 A headless CMS reproducing Payload CMS (https://payloadcms.com):
 
-- Admin panel on /admin with the same UI as Payload (light theme): dashboard,
+- Admin panel on /admin with the same UI as Payload (light / dark theme): dashboard,
   list view (search, columns, filters, sort, pagination, bulk actions),
   edit view (fields, sidebar, drafts, autosave, versions, API tab),
   live preview, uploads with focal point, Lexical rich text editor, slug fields...

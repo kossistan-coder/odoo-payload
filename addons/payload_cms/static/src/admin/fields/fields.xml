@@ -347,28 +347,31 @@
     </t>
 
     <t t-name="payload.RowActions">
+        <!-- props.index is evaluated when the row renders: the popup content (rendered when it opens)
+             must not read the loop variables, which then hold the last row -->
         <Popup className="'array-actions'" buttonClassName="'array-actions__button'" size="'medium'" horizontalAlign="'center'">
             <t t-set-slot="button"><t t-out="icon('more')"/></t>
             <div class="popup-button-list popup-button-list__text-align--left popup-button-list__button-size--small">
-                <button t-if="row_index > 0" type="button" class="popup-button-list__button array-actions__action array-actions__move-up"
-                        t-on-click="() => this.moveRow(row_index, row_index - 1)">
+                <button t-if="props.index > 0" type="button" class="popup-button-list__button array-actions__action array-actions__move-up"
+                        t-on-click="() => props.owner.moveRow(props.index, props.index - 1)">
                     <div class="array-actions__action-chevron"><t t-out="icon('chevron--up')"/></div><t t-esc="t('general:moveUp')"/>
                 </button>
-                <button t-if="row_index &lt; rows.length - 1" type="button" class="popup-button-list__button array-actions__action"
-                        t-on-click="() => this.moveRow(row_index, row_index + 1)">
+                <button t-if="props.index &lt; props.count - 1" type="button" class="popup-button-list__button array-actions__action"
+                        t-on-click="() => props.owner.moveRow(props.index, props.index + 1)">
                     <div class="array-actions__action-chevron"><t t-out="icon('chevron')"/></div><t t-esc="t('general:moveDown')"/>
                 </button>
-                <t t-if="!hasMaxRows">
+                <t t-if="props.canAdd">
                     <button type="button" class="popup-button-list__button array-actions__action array-actions__add"
-                            t-on-click="() => field.type === 'blocks' ? this.addBlock(row_index + 1) : this.addRow(row_index + 1)">
+                            t-on-click="() => props.isBlocks ? props.owner.addBlock(props.index + 1) : props.owner.addRow(props.index + 1)">
                         <t t-out="icon('plus')"/><t t-esc="t('general:addBelow')"/>
                     </button>
                     <button type="button" class="popup-button-list__button array-actions__action array-actions__duplicate"
-                            t-on-click="() => this.duplicateRow(row_index)">
+                            t-on-click="() => props.owner.duplicateRow(props.index)">
                         <t t-out="icon('copy')"/><t t-esc="t('general:duplicate')"/>
                     </button>
                 </t>
-                <button type="button" class="popup-button-list__button array-actions__action array-actions__remove" t-on-click="() => this.removeRow(row_index)">
+                <button type="button" class="popup-button-list__button array-actions__action array-actions__remove"
+                        t-on-click="() => props.owner.removeRow(props.index)">
                     <t t-out="icon('x')"/><t t-esc="t('general:remove')"/>
                 </button>
             </div>
@@ -406,7 +409,7 @@
                                     </div>
                                 </div>
                                 <div class="collapsible__actions-wrap">
-                                    <div t-if="!readOnly" class="collapsible__actions"><t t-call="payload.RowActions"/></div>
+                                    <div t-if="!readOnly" class="collapsible__actions"><RowActions owner="this" index="row_index" count="rows.length" canAdd="!hasMaxRows" isBlocks="field.type === 'blocks'"/></div>
                                     <div class="collapsible__indicator"><t t-out="icon(isCollapsed(row) ? 'chevron' : 'chevron--up')"/></div>
                                 </div>
                             </div>
@@ -461,7 +464,7 @@
                                     </div>
                                 </div>
                                 <div class="collapsible__actions-wrap">
-                                    <div t-if="!readOnly" class="collapsible__actions"><t t-call="payload.RowActions"/></div>
+                                    <div t-if="!readOnly" class="collapsible__actions"><RowActions owner="this" index="row_index" count="rows.length" canAdd="!hasMaxRows" isBlocks="field.type === 'blocks'"/></div>
                                     <div class="collapsible__indicator"><t t-out="icon(isCollapsed(row) ? 'chevron' : 'chevron--up')"/></div>
                                 </div>
                             </div>

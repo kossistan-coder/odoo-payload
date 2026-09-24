@@ -9,5 +9,9 @@
         height: 100%;
         border: 0;
         background: #fff;
+
+        &.o_payload_admin_frame--dark {
+            background: #141414; // Payload's dark --theme-bg (--color-base-900)
+        }
     }
 }

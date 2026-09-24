@@ -4,12 +4,14 @@ import io
 import logging
 import mimetypes
 import os
+import secrets
+from functools import partial
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools import SQL
 
-from ..tools import localization, schema, translate
+from ..tools import localization, schema, storage, translate
 from ..tools.query import QueryError, WhereBuilder
 
 _logger = logging.getLogger(__name__)
@@ -72,6 +74,17 @@ class CmsDocument(models.Model):
     focal_x = fields.Float(default=50)
     focal_y = fields.Float(default=50)
     sizes = fields.Json(default=lambda self: {})
+    # backend holding the file and its sizes (native: attachment_id / sizes[*].attachment_id,
+    # s3: storage_key / sizes[*].key), see tools/storage.py
+    storage = fields.Selection([('native', 'Odoo'), ('s3', 'S3')], string='File storage', default='native')
+    storage_key = fields.Char(help='Object key of the file in the external storage.')
+
+    def unlink(self):
+        # seeders (payload.Seeder) only create / update: never delete
+        if self.env.context.get('payload_seeder'):
+            raise UserError(_("Seeder '%s': deleting CMS data is not allowed (seeders only create or update).",
+                              self.env.context['payload_seeder']))
+        return super().unlink()
 
     @api.depends('data')
     def _compute_tenant_id(self):
@@ -217,6 +230,7 @@ class CmsDocument(models.Model):
             self._check_tenant(collection, data, scope)
         status = self._target_status(collection, data, draft, current=None)
         clean = schema.apply_defaults(fields_conf, schema.sanitize(fields_conf, data))
+        clean = schema.apply_computed(fields_conf, clean)
         clean = self._generate_slugs(collection, clean)
         doc = self.new({'collection_id': collection.id})
         errors = schema.validate(fields_conf, clean, required=status == 'published')
@@ -269,6 +283,7 @@ class CmsDocument(models.Model):
         stored = self.data or {}
         previous = schema.flatten_locale(fields_conf, stored, loc) if loc else stored
         clean = schema.sanitize(fields_conf, data, previous=previous)
+        clean = schema.apply_computed(fields_conf, clean)
         clean = self._generate_slugs(collection, clean)
         errors = schema.validate(fields_conf, clean, required=status == 'published')
         errors += self._check_unique(collection, clean)
@@ -296,13 +311,9 @@ class CmsDocument(models.Model):
         return self
 
     def _payload_delete(self):
-        attachments = self.mapped('attachment_id')
-        for record in self:
-            for size in (record.sizes or {}).values():
-                if size.get('attachment_id'):
-                    attachments |= self.env['ir.attachment'].browse(size['attachment_id'])
+        files = [ref for record in self for ref in record._stored_files()]
         self.unlink()
-        attachments.exists().unlink()
+        self.browse()._delete_files(files)
 
     def _payload_duplicate(self):
         self.ensure_one()
@@ -317,8 +328,8 @@ class CmsDocument(models.Model):
             data[title_field] = '%s - Copy' % data[title_field]
         data['_status'] = 'draft'
         upload = None
-        if collection.upload and self.attachment_id:
-            upload = (self.filename, base64.b64decode(self.attachment_id.datas), self.mime_type)
+        if collection.upload and self._file_key():
+            upload = (self.filename, self._file_content(), self.mime_type)
         return self.with_context(payload_locale=None)._payload_create(collection, data, draft=True, upload=upload)
 
     # ------------------------------------------------------------------
@@ -407,7 +418,8 @@ class CmsDocument(models.Model):
         })
         if collection.max_versions:
             old = Version.search([('document_id', '=', self.id)], order='id desc', offset=collection.max_versions)
-            old.unlink()
+            # history pruning (maxPerDoc) is not a deletion of content: allowed during seeders
+            old.with_context(payload_seeder=False).unlink()
         return version
 
     def _restore_version(self, version, draft=False):
@@ -434,46 +446,86 @@ class CmsDocument(models.Model):
             candidate = '%s-%s%s' % (stem, index, ext)
         return candidate
 
+    # -- file storage (tools/storage.py) --------------------------------
+    def _storage_backend(self, name=None):
+        return storage.get_backend(self.env, name or self.storage or 'native', owner=self)
+
+    def _file_key(self, size=None):
+        """Storage key of the original file (or of a ``sizes`` entry)."""
+        entry = size if size is not None else {'attachment_id': self.attachment_id.id, 'key': self.storage_key}
+        return entry.get('key') if self.storage == 's3' else entry.get('attachment_id')
+
+    @staticmethod
+    def _key_vals(backend, key, size=False):
+        if backend == 's3':
+            return {'key': key} if size else {'storage_key': key, 'attachment_id': False}
+        return {'attachment_id': key} if size else {'attachment_id': key, 'storage_key': False}
+
+    def _stored_files(self):
+        """[(backend, key)] of the original file and of its sizes."""
+        self.ensure_one()
+        keys = [self._file_key()] + [self._file_key(s) for s in (self.sizes or {}).values()]
+        return [(self.storage or 'native', key) for key in keys if key]
+
+    def _file_content(self, size=None):
+        self.ensure_one()
+        key = self._file_key(size)
+        if not key:
+            raise UserError(_('The file of "%s" is missing.', self.filename))
+        try:
+            return self._storage_backend().get(key)
+        except storage.StorageError as e:
+            raise UserError(str(e)) from e
+
+    def _put_file(self, backend, token, filename, content, mimetype):
+        """Store a file under a new key (keys are never reused: rollbacks and
+        deletions of the previous files cannot touch it)."""
+        try:
+            key = backend.put('%s/%s/%s/%s' % (self.collection_slug, self.id, token, filename), content, mimetype)
+        except storage.StorageError as e:
+            raise UserError(str(e)) from e
+        if backend.name == 's3':
+            self.env.cr.postrollback.add(partial(self._delete_remote, backend, [key]))
+        return key
+
+    @staticmethod
+    def _delete_remote(backend, keys):
+        for key in keys:
+            try:
+                backend.delete(key)
+            except storage.StorageError as e:
+                _logger.warning("Payload CMS: %s", e)
+
+    def _delete_files(self, files):
+        """Delete stored files; external objects are only deleted once the transaction is committed."""
+        native = [int(key) for backend, key in files if backend == 'native']
+        if native:
+            self.env['ir.attachment'].sudo().browse(native).exists().unlink()
+        remote = [key for backend, key in files if backend == 's3']
+        if remote:
+            self.env.cr.postcommit.add(partial(self._delete_remote, storage.get_backend(self.env, 's3'), remote))
+
     def _store_upload(self, collection, upload, data=None):
-        """``upload`` is a tuple (filename, bytes, mimetype)."""
+        """``upload`` is a tuple (filename, bytes, mimetype), stored in the selected backend."""
         self.ensure_one()
         filename, content, mimetype = upload
         mimetype = mimetype or mimetypes.guess_type(filename)[0] or 'application/octet-stream'
         filename = self._unique_filename(collection, filename)
-        old = self.attachment_id
-        old_sizes = self.sizes or {}
-        attachment = self.env['ir.attachment'].create({
-            'name': filename,
-            'raw': content,
-            'mimetype': mimetype,
-            'res_model': self._name,
-            'res_id': self.id,
-            'public': True,
-        })
-        vals = {
-            'attachment_id': attachment.id,
-            'filename': filename,
-            'mime_type': mimetype,
-            'filesize': len(content),
-            'width': 0,
-            'height': 0,
-        }
+        old_files = self._stored_files()
+        backend = self._storage_backend(storage.get_settings(self.env)['backend'])
+        token = secrets.token_hex(4)
+        key = self._put_file(backend, token, filename, content, mimetype)
+        vals = dict(self._key_vals(backend.name, key), storage=backend.name, filename=filename, mime_type=mimetype,
+                    filesize=len(content), width=0, height=0)
         focal = (data or {}).get('focalX'), (data or {}).get('focalY')
         if focal[0] is not None and focal[1] is not None:
             vals.update(focal_x=float(focal[0]), focal_y=float(focal[1]))
         self.write(vals)
-        self._remove_sizes(old_sizes)
-        if old:
-            old.unlink()
-        self._generate_image_sizes(collection, content)
+        self._generate_image_sizes(collection, content, token)
+        self._delete_files(set(old_files) - set(self._stored_files()))
         self.title = self._compute_title(collection, self.data or {})
 
-    def _remove_sizes(self, sizes):
-        ids = [s.get('attachment_id') for s in (sizes or {}).values() if s.get('attachment_id')]
-        if ids:
-            self.env['ir.attachment'].browse(ids).exists().unlink()
-
-    def _generate_image_sizes(self, collection, content):
+    def _generate_image_sizes(self, collection, content, token=None):
         self.ensure_one()
         if not Image or not (self.mime_type or '').startswith('image/') or self.mime_type == 'image/svg+xml':
             self.sizes = {}
@@ -490,6 +542,8 @@ class CmsDocument(models.Model):
         fmt = (image.format or Image.registered_extensions().get(ext.lower()) or 'PNG').upper()
         if fmt == 'JPG':
             fmt = 'JPEG'
+        backend = self._storage_backend()
+        token = token or secrets.token_hex(4)
         sizes = {}
         for size in collection.image_sizes or []:
             width, height = int(size.get('width') or 0), int(size.get('height') or 0)
@@ -501,22 +555,14 @@ class CmsDocument(models.Model):
             to_save.save(buffer, format=fmt, quality=85)
             size_name = '%s-%sx%s%s' % (stem, resized.size[0], resized.size[1], ext)
             raw = buffer.getvalue()
-            attachment = self.env['ir.attachment'].create({
-                'name': size_name,
-                'raw': raw,
-                'mimetype': self.mime_type,
-                'res_model': self._name,
-                'res_id': self.id,
-                'public': True,
-            })
-            sizes[size['name']] = {
-                'attachment_id': attachment.id,
+            key = self._put_file(backend, token, size_name, raw, self.mime_type)
+            sizes[size['name']] = dict(self._key_vals(backend.name, key, size=True), **{
                 'filename': size_name,
                 'width': resized.size[0],
                 'height': resized.size[1],
                 'mimeType': self.mime_type,
                 'filesize': len(raw),
-            }
+            })
         self.sizes = sizes
 
     def _resize(self, image, width, height):
@@ -540,9 +586,11 @@ class CmsDocument(models.Model):
     def _apply_upload_edits(self, collection, edits):
         """Crop / focal point edits sent by the admin's Edit Image drawer."""
         self.ensure_one()
-        if not self.attachment_id:
+        if not self._file_key():
             return
-        content = base64.b64decode(self.attachment_id.datas)
+        content = self._file_content()
+        old_files = self._stored_files()
+        token = secrets.token_hex(4)
         focal = edits.get('focalPoint') or {}
         if focal.get('x') is not None and focal.get('y') is not None:
             self.write({'focal_x': float(focal['x']), 'focal_y': float(focal['y'])})
@@ -562,10 +610,50 @@ class CmsDocument(models.Model):
                 fmt = image.format or 'PNG'
                 cropped.save(buffer, format=fmt if fmt != 'JPG' else 'JPEG', quality=90)
                 content = buffer.getvalue()
-                self.attachment_id.write({'raw': content})
-                self.filesize = len(content)
-        self._remove_sizes(self.sizes)
-        self._generate_image_sizes(collection, content)
+                key = self._put_file(self._storage_backend(), token, self.filename, content, self.mime_type)
+                self.write(dict(self._key_vals(self.storage, key), filesize=len(content)))
+        self._generate_image_sizes(collection, content, token)
+        self._delete_files(set(old_files) - set(self._stored_files()))
+
+    @api.model
+    def _payload_migrate_storage(self, target=None):
+        """Copy the files of every upload document to ``target`` (default: the
+        selected backend). The previous files are deleted only after the copy
+        (external objects: after the commit). Returns (moved, errors)."""
+        target = target or storage.get_settings(self.env)['backend']
+        docs = self.sudo().search([('collection_id.upload', '=', True), ('filename', '!=', False),
+                                   ('storage', '!=', target)], order='id')
+        moved, errors = 0, []
+        for doc in docs:
+            try:
+                with self.env.cr.savepoint():
+                    doc._move_files(target)
+                moved += 1
+            except (UserError, storage.StorageError) as e:
+                errors.append('%s: %s' % (doc.filename, e))
+                _logger.warning("Payload CMS: cannot move %s to %s: %s", doc.filename, target, e)
+        return moved, errors
+
+    def _move_files(self, target):
+        self.ensure_one()
+        if not self._file_key():
+            self.storage = target
+            return
+        old_files = self._stored_files()
+        backend = self._storage_backend(target)
+        token = secrets.token_hex(4)
+        vals = dict(self._key_vals(target, self._put_file(backend, token, self.filename, self._file_content(), self.mime_type)),
+                    storage=target)
+        sizes = {}
+        for name, size in (self.sizes or {}).items():
+            entry = {k: v for k, v in size.items() if k not in ('attachment_id', 'key')}
+            if self._file_key(size):
+                key = self._put_file(backend, token, size['filename'], self._file_content(size), size.get('mimeType'))
+                entry.update(self._key_vals(target, key, size=True))
+            sizes[name] = entry
+        vals['sizes'] = sizes
+        self.write(vals)
+        self._delete_files(old_files)
 
     @api.model
     def _output_rich_text(self, fields_conf, doc):
@@ -578,6 +666,15 @@ class CmsDocument(models.Model):
 
     def _file_url(self, filename):
         return '/api/%s/file/%s' % (self.collection_slug, filename)
+
+    def _public_file_url(self, key, settings=None):
+        """Direct URL of an external object when the storage delivers files publicly, else None."""
+        if self.storage != 's3' or not key:
+            return None
+        settings = settings or storage.get_settings(self.env)
+        if settings['delivery'] != 'public':
+            return None
+        return storage.S3Backend(settings).url(key)
 
     # ------------------------------------------------------------------
     # Serialization
@@ -602,11 +699,13 @@ class CmsDocument(models.Model):
         if collection.upload:
             base = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '').rstrip('/') \
                 if self.env.context.get('payload_absolute_urls') else ''
-            url = base + self._file_url(self.filename) if self.filename else None
+            settings = storage.get_settings(self.env) if self.storage == 's3' else None
+            url = (self._public_file_url(self.storage_key, settings) or base + self._file_url(self.filename)) \
+                if self.filename else None
             sizes = {}
             for name, size in (self.sizes or {}).items():
                 sizes[name] = {
-                    'url': base + self._file_url(size['filename']),
+                    'url': self._public_file_url(size.get('key'), settings) or base + self._file_url(size['filename']),
                     'width': size.get('width'),
                     'height': size.get('height'),
                     'mimeType': size.get('mimeType'),
@@ -804,6 +903,13 @@ class CmsDocumentVersion(models.Model):
     status = fields.Selection([('draft', 'Draft'), ('published', 'Published')], default='draft')
     autosave = fields.Boolean()
     latest = fields.Boolean(index=True)
+
+    def unlink(self):
+        # seeders (payload.Seeder) only create / update: never delete
+        if self.env.context.get('payload_seeder'):
+            raise UserError(_("Seeder '%s': deleting CMS data is not allowed (seeders only create or update).",
+                              self.env.context['payload_seeder']))
+        return super().unlink()
 
     def _payload_serialize(self, depth=0, populate=None):
         self.ensure_one()

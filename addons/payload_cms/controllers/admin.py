@@ -13,8 +13,11 @@ class PayloadAdmin(http.Controller):
 
     @http.route(['/admin', '/admin/<path:path>'], type='http', auth='public', sitemap=False)
     def payload_admin(self, path=None, **_kw):
+        # Theme chosen on the Account page (cookie set by core/theme.js); "auto" is resolved client side.
+        theme = request.httprequest.cookies.get('payload-theme')
         response = request.render('payload_cms.admin_page', {
             'payload_config': Markup(json.dumps({'adminRoute': '/admin', 'apiRoute': '/api'})),
+            'admin_theme': theme if theme in ('light', 'dark') else 'light',
         })
         response.headers['Cache-Control'] = 'no-store'
         return response

@@ -24,6 +24,15 @@ export class PayloadAdminAction extends Component {
         const path = saved || this.props.action?.params?.path || "";
         this.src = `/admin${path.startsWith("/") ? path : ""}`;
         this.actionId = actionId;
+        // Same origin as /admin: the admin theme (localStorage `payload-theme`, see admin/core/theme.js)
+        // gives the frame its background while it loads, no white flash in dark mode.
+        let pref = null;
+        try {
+            pref = window.localStorage.getItem("payload-theme");
+        } catch {
+            // storage blocked
+        }
+        this.dark = pref === "dark" || (pref !== "light" && Boolean(window.matchMedia?.("(prefers-color-scheme: dark)").matches));
         this.onMessage = (ev) => {
             if (ev.origin !== window.location.origin || ev.source !== this.frameRef.el?.contentWindow) {
                 return;

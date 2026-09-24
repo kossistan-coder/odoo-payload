@@ -1,0 +1,60 @@
+<odoo>
+  <data>
+    <!-- explicit list view definition -->
+<!--
+    <record model="ir.ui.view" id="techlives_series.list">
+      <field name="name">techlives_series list</field>
+      <field name="model">techlives_series.techlives_series</field>
+      <field name="arch" type="xml">
+        <list>
+          <field name="name"/>
+          <field name="value"/>
+          <field name="value2"/>
+        </list>
+      </field>
+    </record>
+-->
+
+    <!-- actions opening views on models -->
+<!--
+    <record model="ir.actions.act_window" id="techlives_series.action_window">
+      <field name="name">techlives_series window</field>
+      <field name="res_model">techlives_series.techlives_series</field>
+      <field name="view_mode">list,form</field>
+    </record>
+-->
+
+    <!-- server action to the one above -->
+<!--
+    <record model="ir.actions.server" id="techlives_series.action_server">
+      <field name="name">techlives_series server</field>
+      <field name="model_id" ref="model_techlives_series_techlives_series"/>
+      <field name="state">code</field>
+      <field name="code">
+        action = {
+          "type": "ir.actions.act_window",
+          "view_mode": "list,form",
+          "res_model": model._name,
+        }
+      </field>
+    </record>
+-->
+
+    <!-- Top menu item -->
+<!--
+    <menuitem name="techlives_series" id="techlives_series.menu_root"/>
+-->
+    <!-- menu categories -->
+<!--
+    <menuitem name="Menu 1" id="techlives_series.menu_1" parent="techlives_series.menu_root"/>
+    <menuitem name="Menu 2" id="techlives_series.menu_2" parent="techlives_series.menu_root"/>
+-->
+    <!-- actions -->
+<!--
+    <menuitem name="List" id="techlives_series.menu_1_list" parent="techlives_series.menu_1"
+              action="techlives_series.action_window"/>
+    <menuitem name="Server to list" id="techlives_series" parent="techlives_series.menu_2"
+              action="techlives_series.action_server"/>
+-->
+  </data>
+</odoo>

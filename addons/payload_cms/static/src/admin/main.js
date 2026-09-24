@@ -13,6 +13,7 @@ import { ApiView } from "./views/api_view";
 import { AccountView } from "./views/account";
 import { NotFoundView } from "./views/not_found";
 import { ApiDocsView } from "./views/api_docs";
+import { ExtensionView } from "./views/extension";
 
 const VIEWS = {
     dashboard: DashboardView,
@@ -24,6 +25,7 @@ const VIEWS = {
     account: AccountView,
     notFound: NotFoundView,
     apiDocs: ApiDocsView,
+    extension: ExtensionView,
 };
 
 class Root extends Component {
@@ -65,7 +67,7 @@ class Root extends Component {
     /** Remount views when the document (not only the tab) changes. */
     get viewKey() {
         const { name, params } = this.route;
-        return `${name}:${params.kind || ""}:${params.slug || ""}:${params.id ?? "new"}:${params.versionId || ""}:${this.store?.locale || ""}:${this.store?.tenant || ""}`;
+        return `${name}:${params.path || ""}:${params.kind || ""}:${params.slug || ""}:${params.id ?? "new"}:${params.versionId || ""}:${this.store?.locale || ""}:${this.store?.tenant || ""}`;
     }
 
     get templateClass() {
@@ -75,6 +77,9 @@ class Root extends Component {
         }
         if (name === "list") {
             return `${params.slug}-list`;
+        }
+        if (name === "extension") {
+            return `extension-view extension-view--${(params.path || "").split("/")[0]}`;
         }
         if (name === "apiDocs") {
             return "api-docs-view";

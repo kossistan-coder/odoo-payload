@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="payload.ExtensionView">
+        <t t-if="view">
+            <t t-component="view.component" route="viewRoute"/>
+        </t>
+        <div t-else="" class="gutter gutter--left gutter--right not-found">
+            <h1 t-esc="t('general:nothingFound')"/>
+            <p>No view is registered for <code t-esc="'/admin/x/' + props.route.params.path"/>.</p>
+        </div>
+    </t>
+
+</templates>

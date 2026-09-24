@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Payload admin (payload_cms) opened from the "Tech Lives Series" app -->
+    <record id="action_techlives_admin" model="ir.actions.client">
+        <field name="name">Tech Lives Series</field>
+        <field name="tag">payload_cms.admin</field>
+    </record>
+
+    <menuitem id="menu_techlives_root" name="Tech Lives Series" action="action_techlives_admin"
+              web_icon="techlives_series,static/description/icon.png"
+              groups="payload_cms.group_payload_cms_user" sequence="11"/>
+    <menuitem id="menu_techlives_dashboard" name="Tableau de bord" parent="menu_techlives_root"
+              action="action_techlives_admin" sequence="1"/>
+
+    <!-- Écran ajouté à l'admin OdooPayload par le module (static/src/payload/stats.js) -->
+    <record id="action_techlives_stats" model="ir.actions.client">
+        <field name="name">Statistiques</field>
+        <field name="tag">payload_cms.admin</field>
+        <field name="params" eval="{'path': '/x/statistiques'}"/>
+    </record>
+    <menuitem id="menu_techlives_stats" name="Statistiques" parent="menu_techlives_root"
+              action="action_techlives_stats" sequence="2"/>
+
+    <!--
+        Collections are not listed in the Odoo top menu: the Payload admin sidebar
+        already lists them. Only "Tableau de bord" and "Configuration" are kept here.
+    -->
+
+    <!-- Configuration (actions provided by payload_cms) -->
+    <menuitem id="menu_techlives_config" name="Configuration" parent="menu_techlives_root" sequence="90"
+              groups="payload_cms.group_payload_cms_admin"/>
+    <menuitem id="menu_techlives_config_collections" name="Collections" parent="menu_techlives_config"
+              action="payload_cms.action_payload_config_collections" sequence="10"/>
+    <menuitem id="menu_techlives_config_globals" name="Globals" parent="menu_techlives_config"
+              action="payload_cms.action_payload_config_globals" sequence="20"/>
+    <menuitem id="menu_techlives_config_blocks" name="Blocks" parent="menu_techlives_config"
+              action="payload_cms.action_payload_config_blocks" sequence="25"/>
+    <menuitem id="menu_techlives_config_fields" name="Fields" parent="menu_techlives_config"
+              action="payload_cms.action_payload_config_fields" sequence="30"/>
+    <menuitem id="menu_techlives_config_localization" name="Localization" parent="menu_techlives_config"
+              action="payload_cms.action_payload_config_localization" sequence="40"/>
+    <menuitem id="menu_techlives_config_multisite" name="Multisite" parent="menu_techlives_config"
+              action="payload_cms.action_payload_config_multitenancy" sequence="50"/>
+    <menuitem id="menu_techlives_config_storage" name="Storage" parent="menu_techlives_config"
+              action="payload_cms.action_payload_config_storage" sequence="55"/>
+    <menuitem id="menu_techlives_config_api_docs" name="API Docs" parent="menu_techlives_config"
+              action="payload_cms.action_payload_config_api_docs" sequence="60"/>
+</odoo>

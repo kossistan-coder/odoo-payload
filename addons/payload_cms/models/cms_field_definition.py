@@ -3,7 +3,7 @@ import json
 import re
 
 from odoo import api, fields, models, _
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 
 FIELD_TYPES = [
     ('text', 'Text'),
@@ -85,6 +85,13 @@ class CmsFieldDefinition(models.Model):
     slug_source = fields.Char(default='title', help="Field the slug is generated from.")
     initially_collapsed = fields.Boolean()
     config = fields.Json(default=lambda self: {}, help="Extra configuration (free JSON).")
+
+    def unlink(self):
+        # seeders (payload.Seeder) only create / update: never delete
+        if self.env.context.get('payload_seeder'):
+            raise UserError(_("Seeder '%s': deleting CMS data is not allowed (seeders only create or update).",
+                              self.env.context['payload_seeder']))
+        return super().unlink()
 
     @api.depends('name', 'label', 'field_type')
     def _compute_display_name(self):
@@ -243,6 +250,10 @@ class CmsFieldDefinition(models.Model):
                                'plural': block.label or _humanize(block.name)},
                     'fields': block.child_ids._admin_config(),
                 } for block in field.child_ids]
+                # reusable blocks (Configuration → Blocks) offered by this field
+                inline = {block['slug'] for block in conf['blocks']}
+                conf['blocks'] += [block for block in self.env['cms.block']._blocks_for(field.collection_id.slug, field.name)
+                                   if block['slug'] not in inline]
             elif ftype == 'tabs':
                 conf['tabs'] = [{
                     'name': tab.name or None,
@@ -344,7 +355,7 @@ class CmsFieldDefinition(models.Model):
 
 
 # field options kept as-is in `config`: `private` = hidden from anonymous API clients
-EXTRA_KEYS = ('private',)
+EXTRA_KEYS = ('private', 'pattern', 'patternMessage', 'compute', 'apiName', 'role')
 KNOWN_ADMIN_KEYS = {'position', 'width', 'description', 'placeholder', 'readOnly', 'hidden', 'initCollapsed'}
 
 

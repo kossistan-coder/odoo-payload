@@ -3,7 +3,7 @@
 Un CMS headless dans Odoo 18 qui reproduit [Payload CMS](https://payloadcms.com) (v3.90) :
 
 - **Admin sur `/admin`** avec la même interface que Payload (thème clair) : dashboard, navigation, vues liste, édition, versions, API, compte et login. L'UI utilise les **feuilles SCSS originales de Payload** (licence MIT), compilées telles quelles. Les classes CSS et la structure HTML sont celles de Payload, ce qui donne le même rendu.
-- **API REST compatible Payload sur `/api`** : un frontend Next.js, Astro ou autre écrit pour Payload peut s'y brancher.
+- **API « à la Odoo »** (`Model`, JSON-RPC, routes des modules documentées dans Swagger). L'API REST au format Payload sur `/api` est réservée à l'admin.
 - **Collections, globals et champs** déclarés depuis le backend Odoo (menu *CMS → Configuration*) ou en code, avec des dictionnaires au format `payload.config.ts`.
 
 ## Fonctionnalités
@@ -71,7 +71,132 @@ cd addons/payload_cms/static/lib/lexical && npm install && npm run build
 
 Tailwind est branché sur les tokens de Payload (`bg-elevation-50`, `text-elevation-500`…) pour les éléments ajoutés propres à Odoo. Le rendu « à l'identique » vient des SCSS de Payload, importées dans la couche `payload-default`.
 
-## API REST (compatible Payload)
+## API « à la Odoo » (édition : modules, admin, écritures)
+
+Les collections se lisent et s'écrivent comme des modèles Odoo, avec des réponses simples. L'API REST `/api` reste l'API interne de l'admin, fermée au public.
+
+**Formes des valeurs** (comme `read` dans Odoo) : une valeur vide vaut `false`. Une relation vaut `[id, "nom affiché"]` et une relation multiple une liste d'ids. Une image ou un fichier vaut son URL, un texte riche du HTML. Une date vaut `"2026-10-12"`, une date avec heure `"2026-10-12 18:00:00"` (UTC).
+
+**En Python** (contrôleurs, seeders, crons…) :
+
+```python
+from odoo.addons.payload_cms.payload import Model
+
+Events = Model(request.env, 'events')
+Events.search_read([('active', '=', True)], ['designation', 'date_sortie', 'episode'], order='date_sortie desc', limit=3)
+Events.web_search_read([('active', '=', True)], {           # champs choisis, relations imbriquées
+    'designation': {}, 'couverture': {},
+    'speakers': {'fields': {'nom': {}, 'prenom': {}, 'profile': {}}},
+}, limit=3)                                                  # -> {'length': 7, 'records': [...]}
+Events.create({'designation': 'Live', 'date_sortie': '2026-11-02', 'time': '18:00', 'speakers': [(6, 0, [38])]})
+Events.write([68], {'speakers': [(4, 32)], 'active': False})
+Events.unlink([68])
+Events.fields_get(attributes=['type', 'relation'])
+```
+
+Méthodes : `search`, `search_count`, `search_read`, `read`, `web_search_read`, `web_read`, `name_search`, `fields_get`, `create`, `write`, `unlink`.
+- Les domaines Odoo sont acceptés : `&`, `|`, `!`, `=`, `!=`, `in`, `not in`, `ilike`, `like`, `>`, `>=`, `<`, `<=`. `display_name`, `create_date` et `write_date` sont utilisables dans les domaines comme dans `order`.
+- En écriture, les relations multiples acceptent les commandes x2many `(6, 0, ids)`, `(4, id)`, `(3, id)` et `(5,)`, ou une simple liste d'ids.
+- Droits : un visiteur lit les documents publiés des collections en *Public read*, sans les champs privés. Les éditeurs CMS lisent et écrivent tout. `Model(...).sudo()` ignore les droits.
+- Contexte : `Model(...).with_context(draft=True)` lit les brouillons (éditeurs uniquement), `with_context(lang='fr_FR')` choisit la langue.
+
+**Vos propres méthodes d'API** : déclarez-les dans la classe de la collection avec `@expose`. `self` est le `Model` de la collection :
+
+```python
+from odoo.addons.payload_cms.payload import Collection, expose, fields
+
+class Event(Collection):
+    _name = 'events'
+    ...
+    @expose(auth='public')          # 'public' : tout le monde ; 'user' (défaut) : éditeurs CMS
+    def replays(self, limit=None):
+        return self.search_read([('episode', '!=', False)], ['designation', 'episode'], order='date_sortie desc', limit=limit)
+```
+
+**En JSON-RPC** (comme `/web/dataset/call_kw` d'Odoo), pour toutes ces méthodes, y compris les `@expose` :
+
+```bash
+curl -X POST https://site/payload/dataset/call_kw -H 'Content-Type: application/json' -d '{
+  "jsonrpc": "2.0", "method": "call",
+  "params": {"model": "events", "method": "search_read",
+             "args": [[["active", "=", true]]],
+             "kwargs": {"fields": ["designation", "date_sortie"], "order": "date_sortie desc", "limit": 3}}}'
+```
+
+Authentification : cookie de session Odoo, ou en-tête `Authorization: Bearer <clé API Odoo | JWT Payload>`. Sans en-tête, l'appel est anonyme.
+
+**Vos propres routes** : un contrôleur Odoo classique qui utilise `Model` (exemple : `techlives_series/controllers/controllers.py`, `GET /techlives/api/lives`).
+
+## API Delivery (contenu pour les frontends)
+
+Deux API, deux usages :
+- **édition / CMS** : `Model` et le JSON-RPC (forme des enregistrements Odoo), pour l'admin, les modules et les écritures ;
+- **Delivery** : lecture seule, pour les sites et applications (Angular, Next.js, Flutter…). Le format est générique, simple et multilingue.
+
+```python
+from odoo.addons.payload_cms.payload import Delivery
+
+Delivery(request.env, depth=2).document('pages', 'home')            # la page, relations peuplées (par slug ou id)
+Delivery(request.env, locale='fr', depth=1).documents('events', [('active', '=', True)], order='date_sortie desc', limit=10)
+```
+
+```json
+{
+  "data": {
+    "id": 1, "type": "page",
+    "attributes": {"title": {"fr": "Accueil", "en": null}, "slug": {"fr": "home", "en": null}},
+    "seo": {"title": {"fr": "Tech Lives Series", "en": null}, "description": {"fr": null, "en": null}, "image": null},
+    "blocks": [
+      {"id": "abc", "type": "episodesList",
+       "config": {"mode": "auto", "limit": 3, "anchor": "episodes",
+                  "source": {"collection": "event", "filter": [["active", "=", true]], "sort": "releaseDate desc", "limit": 3}},
+       "content": {"title": {"fr": "Nos épisodes", "en": null}, "image": "https://cms.example.com/api/media/file/cover.jpg",
+                   "events": [{"id": 68, "type": "event",
+                               "attributes": {"title": {"fr": "Épisode 7 — …", "en": null}, "releaseDate": "2026-10-12",
+                                              "cover": "https://cms.example.com/api/media/file/vignette.jpg",
+                                              "speakers": [{"id": 38, "type": "speaker",
+                                                            "attributes": {"firstName": "Yao", "lastName": "BATAKA", "profile": "https://…",
+                                                                           "events": [{"id": 68, "type": "event", "displayName": "Épisode 7 — …"}]}}]}}]}}
+    ],
+    "meta": {"locale": "all", "availableLocales": ["fr", "en"], "status": "published", "publishedAt": null,
+             "createdAt": "2026-09-23T23:20:02Z", "updatedAt": "2026-09-24T09:48:32Z"}
+  },
+  "meta": {"locale": "all", "availableLocales": ["fr", "en"], "defaultLocale": "fr", "depth": 2}
+}
+```
+
+Règles :
+- **Relations peuplées** : une relation vaut les documents liés eux-mêmes, avec toutes leurs informations, directement à leur place (`events`, `speakers`, `live`…), jusqu'à `depth` niveaux (maximum 3). Au-delà, et avec `depth=0`, un document lié est résumé en `{id, type, displayName}`, ce qui coupe les boucles comme live → intervenant → live. Il n'y a jamais d'ids seuls, et aucune clé n'est un nombre.
+- **Fichiers** : une image ou un fichier vaut son **URL absolue**.
+- **Structure** : `id` et `type`, puis `attributes`, `seo` (le groupe `meta` / `seo`), `blocks` (le champ blocks de la collection) et `meta` (statut, dates, langues ; seulement au premier niveau). Une liste renvoie `data: [...]` et, dans `meta`, `total`, `limit` et `offset`.
+- **Nommage** : les clés sont en `camelCase` et les types au singulier en `camelCase` (`pages` → `page`, bloc `live-hero` → `liveHero`). `api_name=` renomme un champ sans migrer les données, par exemple `designation = fields.Char("Désignation", api_name="title")`.
+- **Valeurs absentes** : `null`, et `[]` pour une liste.
+- **Collections non lisibles** : les relations vers une collection que le lecteur ne peut pas lire (par exemple les participants) ne sont pas exposées.
+- **Langues** : un champ traduisible vaut toujours `{langue: valeur}`. Avec `locale='all'`, toutes les langues disponibles sont présentes, avec `null` si la valeur n'est pas traduite. Avec `locale='fr'`, seule la langue demandée est présente, et la langue par défaut sert de repli.
+- **Blocs** : `{id, type, config, content}`. Les champs select, radio, checkbox et number vont dans `config`, les autres dans `content`. `role='config'` ou `role='content'` sur un champ change ce choix.
+- **Blocs automatiques** : un bloc code-first décrit les enregistrements qu'il affiche avec `_delivery_sources`. La requête apparaît dans `config.source` (`collection`, `filter`, `sort`, `limit`, avec les noms de l'API) et les documents trouvés dans `content`.
+
+  ```python
+  class EpisodesList(Block):
+      _name = 'episodes-list'
+      ...
+      @classmethod
+      def _delivery_sources(cls, row, env):
+          if row.get('mode') == 'manual':
+              return []            # sélection manuelle : les documents choisis dans l'admin
+          return [{'field': 'events', 'collection': 'events', 'domain': [('active', '=', True)],
+                   'order': 'date_sortie desc', 'limit': int(row.get('limit') or 3)}]
+  ```
+
+- **Documentation** : `@api_doc(delivery=True, depth=1, model='events')` décrit ce format dans Swagger, avec les relations populées par défaut par la route.
+- **Exemple** : `techlives_series/controllers/controllers.py`.
+  - `GET /techlives/api/pages/<slug|id>` renvoie la page complète (`depth=2`).
+  - `/lives` et `/intervenants` utilisent `depth=1`, `/lives/<slug>` utilise `depth=2`, `/pages` utilise `depth=0`.
+  - Paramètres : `?locale=all|fr|en`, `?depth=`, `?draft=1` (utilisateurs du CMS).
+
+## API REST interne (`/api`, format Payload)
+
+`/api` est l'API interne de l'admin : elle est réservée aux utilisateurs du CMS (session, JWT ou clé API d'un éditeur). Seuls les fichiers des collections upload (`/api/<collection>/file/<nom>`, les images du site) et le login restent publics. L'API publique d'un site s'écrit dans son module (voir « API à la Odoo » ci-dessus).
 
 | Méthode | Route | |
 |---|---|---|
@@ -186,22 +311,62 @@ Le chatter Odoo (historique, messages, activités) reste accessible par « ⋯ �
 
 Inter (texte) et Roboto Mono (code) sont chargées depuis Google Fonts. Ce sont les équivalents Google Fonts des polices système utilisées par Payload (SF Pro / SF Mono), qui restent en secours. Voir `static/admin_src/css/fonts.css`.
 
+### Thème clair / sombre
+
+Comme dans Payload : **Account → Admin Theme** (Automatic / Light / Dark), ou l'icône soleil / lune en bas de la navigation. « Automatic » suit le thème du système (`prefers-color-scheme`) en direct. Le choix est mémorisé par navigateur (localStorage + cookie `payload-theme`) et appliqué avant le premier affichage (pas de flash). Il vaut aussi pour la page Swagger (`/api-docs`, `?theme=dark|light` pour forcer) et pour l'admin intégré dans Odoo. Code : `static/src/admin/core/theme.js`.
+
 ### Traduction d'un document
 
 Le bouton **Translate** (icône 文A, à côté de Save) est visible dans toutes les langues. Il traduit la langue affichée vers la langue choisie, ou vers toutes les langues d'un coup, puis ouvre le résultat.
 
 ### Documentation Swagger / OpenAPI
 
-Une spécification OpenAPI 3 est générée automatiquement à partir du schéma : champs, brouillons, versions, uploads, locales et sites.
+La documentation décrit **l'API écrite par vos modules**, et non les routes internes de payload_cms. Elle contient :
+- **toutes les routes des contrôleurs** de vos modules (chaque fichier `controllers/*.py` importé dans `controllers/__init__.py`). `@api_doc` les complète (paramètres, corps, schéma de la réponse) ou en masque une avec `@api_doc(hidden=True)` ;
+- les méthodes de vos collections marquées `@expose` ;
+- l'endpoint JSON-RPC générique `/payload/dataset/call_kw`, et le login (optionnels).
+
+```python
+from odoo.addons.payload_cms.payload import Model, api_doc
+
+@api_doc(tags=['Lives'], params={'limit': (int, "Nombre maximum")}, model='events', fields=CARD, paginated=True)
+@http.route('/techlives/api/lives', type='http', auth='public', methods=['GET'])
+def lives(self, limit=None):
+    """Lives actifs, du plus récent au plus ancien."""   # -> résumé et description
+    ...
+```
+
+- Chemin, méthodes, paramètres d'URL (`<string:slug>`) et authentification (`auth='public'` ou `'user'`) viennent de `@http.route`.
+- Le **schéma de la réponse** est généré à partir de la collection (`model`) et des champs renvoyés (`fields` : une liste pour la forme `read`, une spécification pour la forme `web_read` avec relations imbriquées). `many=True` indique une liste, `paginated=True` une réponse `{length, records}`, et `response=` accepte un schéma OpenAPI libre.
+- `body=[...]` décrit le corps JSON d'une route POST à partir des champs de `model`. `params` décrit les paramètres de requête, ou les `params` JSON-RPC pour une route `type='json'`.
+- `@expose(auth='public', model='events', fields=CARD, many=True)` documente une méthode de collection, appelable sur `POST /payload/dataset/call_kw/events/<méthode>`. Ses paramètres sont déduits de sa signature.
+
+Accès :
 - `/api-docs` : Swagger UI (servi par le module, sans CDN) ;
-- `/api-docs/openapi.json` : la spécification (utilisable par Postman ou par un générateur de client, par exemple `openapi-typescript`) ;
+- `/api-docs/openapi.json` : la spécification ;
 - dans l'admin : **Developers → API Docs**.
 
-Réglages dans **Configuration → API Docs Settings** :
-- activation, et accès public ou réservé aux utilisateurs du CMS ;
-- titre, version, description ;
-- serveurs listés et collections documentées ;
-- documentation des routes d'authentification.
+Réglages dans **Configuration → API Docs Settings** : activation, accès public, titre, version, description, serveurs, **modules documentés** (vide = tous les modules qui utilisent payload_cms), endpoint JSON-RPC générique et login.
+
+**Onglet API d'un document** : il montre le document tel que votre API le lit (`web_read`, forme Odoo). La spécification des champs est modifiable pour préparer celle d'un contrôleur, et des boutons copient l'appel en curl ou en Python. L'onglet liste aussi les routes documentées de la collection.
+
+### Blocs réutilisables (Configuration → Blocks)
+
+Des blocs de mise en page créés sans code, pour composer les sections des pages. Un bloc est un assemblage de composants élémentaires :
+
+| Composant | Champ Payload généré |
+|---|---|
+| Text, Textarea, Email, Number, Checkbox, Date, Select | champ du même type |
+| Rich Text Editor | `richText` (Lexical) |
+| Button | groupe `{ label, url, appearance, newTab }` |
+| Image | `upload` vers une collection média |
+| Relationship | `relationship` |
+| List | `array` dont chaque élément contient ses propres composants (cartes, boutons…) |
+
+- **Available in** : champs `blocks` qui proposent le bloc (`pages.layout` par défaut).
+- **Section header** : ajoute d'abord `title` (obligatoire), `subtitle` et `description`, comme `SectionBlock`.
+- Le bloc est stocké dans `cms.block` et ajouté à la configuration des champs ciblés : API, validation et admin le traitent comme un bloc déclaré dans la collection (`blockType` = slug du bloc).
+- Un bloc utilisé par des documents ne peut pas être supprimé (archivez-le). Renommer son slug détache les lignes déjà écrites.
 
 ### Multisite (multi-tenant, façon WordPress Multisite)
 
@@ -229,15 +394,62 @@ Déploiement :
 - vérifiez que `dbfilter` ne dépend pas du sous-domaine (une seule base, ou `dbfilter = ^nom_de_la_base$`) ;
 - les domaines des sites sont acceptés automatiquement en CORS (option « Allow site domains »).
 
+### Stockage des fichiers (MinIO / S3)
+
+Par défaut, les fichiers des collections d'upload (`media`…) et leurs tailles d'image sont stockés comme pièces jointes Odoo (`ir.attachment`, filestore). Ils peuvent aussi l'être dans un bucket compatible S3 (AWS S3, MinIO, Scaleway, Cloudflare R2…) : **Configuration → Storage** (ou menu Odoo *Configuration → Storage*).
+
+- Le client S3 est intégré (`tools/storage.py`, signature AWS V4 avec `requests`) : aucune dépendance à installer.
+- Chaque document retient son stockage (`storage`, `storage_key`, `sizes[*].key`) : après un changement de stockage, les anciens fichiers restent servis et seuls les nouveaux uploads vont dans le nouveau stockage. La case **Move existing files to this storage** copie les fichiers existants, puis supprime les originaux (après la copie, et après le commit pour les objets S3).
+- La connexion est testée à l'enregistrement (écriture / lecture / suppression d'un objet) ; **Create the bucket if missing** crée le bucket.
+- Livraison des fichiers : **Through Odoo** (défaut, bucket privé) — les URLs restent `/api/<collection>/file/<nom>` et Odoo relaie le contenu ; **Directly** — les URLs pointent vers l'URL publique (`Public base URL`, bucket public ou CDN) et `/api/<collection>/file/<nom>` redirige vers elle.
+- La clé secrète n'est jamais renvoyée à l'admin (champ vide = clé conservée).
+
+Les variables d'environnement (ou les options `payload_storage`, `payload_s3_*` d'`odoo.conf`) priment sur les réglages de l'admin, où elles apparaissent en lecture seule :
+
+| Variable | Rôle |
+|---|---|
+| `PAYLOAD_STORAGE` | `native` ou `s3` |
+| `PAYLOAD_S3_ENDPOINT` | ex. `http://minio:9000` (vide = AWS S3) |
+| `PAYLOAD_S3_REGION` | ex. `us-east-1` |
+| `PAYLOAD_S3_BUCKET` | nom du bucket |
+| `PAYLOAD_S3_ACCESS_KEY` / `PAYLOAD_S3_SECRET_KEY` | identifiants |
+| `PAYLOAD_S3_PREFIX` | dossier des objets dans le bucket (optionnel) |
+| `PAYLOAD_S3_ADDRESSING` | `path` (MinIO) ou `virtual` |
+| `PAYLOAD_S3_PUBLIC_URL` | ex. `http://localhost:9010/payload-media` ou un CDN |
+| `PAYLOAD_S3_DELIVERY` | `proxy` (défaut) ou `public` |
+
+Avec docker compose, le service `minio` (profil `minio`, ports 9010 / console 9011) et le service ponctuel `createbuckets` sont optionnels :
+
+```bash
+docker compose up -d minio createbuckets   # MINIO_PUBLIC_BUCKET=true rend le bucket lisible anonymement
+```
+
+puis, dans `.env` (et `docker compose up -d web` pour appliquer) :
+
+```dotenv
+PAYLOAD_STORAGE=s3
+PAYLOAD_S3_ENDPOINT=http://minio:9000
+PAYLOAD_S3_BUCKET=payload-media
+PAYLOAD_S3_ACCESS_KEY=minioadmin
+PAYLOAD_S3_SECRET_KEY=minio_secure_password_123
+PAYLOAD_S3_ADDRESSING=path
+# livraison directe (bucket public) :
+# PAYLOAD_S3_PUBLIC_URL=http://localhost:9010/payload-media
+# PAYLOAD_S3_DELIVERY=public
+```
+
+Sans ces variables, le stockage natif reste utilisé (ou celui choisi dans l'admin).
+
 ### Form Builder (port de `@payloadcms/plugin-form-builder`)
 
 Collections `forms` et `form-submissions` (groupe « Form Builder »).
 
-Pour soumettre un formulaire, sans authentification :
+Pour soumettre un formulaire, sans authentification (JSON-RPC, ou une route de votre module qui appelle `Model(env, 'form-submissions').create(...)`) :
 
 ```bash
-curl -X POST http://localhost:8069/api/form-submissions -H 'Content-Type: application/json' \
-  -d '{"form": 5, "submissionData": [{"field": "email", "value": "jane@example.com"}]}'
+curl -X POST http://localhost:8069/payload/dataset/call_kw -H 'Content-Type: application/json' \
+  -d '{"jsonrpc": "2.0", "method": "call", "params": {"model": "form-submissions", "method": "create",
+       "args": [{"form": 5, "submissionData": [{"field": "email", "value": "jane@example.com"}]}]}}'
 ```
 
 - Les champs requis et les emails sont validés selon le formulaire (erreurs Payload `ValidationError`).
@@ -306,6 +518,61 @@ class Settings(Global):
     phone = fields.Char("Téléphone")
 ```
 
+**Blocs de mise en page (pages personnalisées)** : les pages sont des documents de la collection native **Pages** (y compris l'accueil, slug `home`). Leur champ `layout` se compose de blocs : Content, Media, Call to Action et Archive par défaut. Un module y ajoute ses propres blocs, qui apparaissent dans « Add Layout » :
+
+```python
+from odoo.addons.payload_cms.payload import Block, fields
+
+class LiveHero(Block):
+    _name = 'live-hero'              # blockType dans l'API
+    _label = 'Hero live'
+    _inherit = 'pages.layout'        # '<collection>.<champ blocks>', ou une liste de cibles
+    _sequence = 10                   # ordre dans « Add Layout »
+
+    live = fields.Many2one('events', "Live mis en avant")
+    badge = fields.Char("Badge", translate=True)
+    cta_label = fields.Char("Bouton", default="Regarder l'épisode", row="cta")
+    cta_url = fields.Char("Lien", row="cta")
+```
+
+- **Synchronisation** : comme les collections, le bloc est ajouté ou mis à jour à l'installation et à la mise à jour du module, et retiré si sa classe disparaît.
+- **Préservation** : le reste de la collection n'est pas touché (traductions, modifications faites dans le constructeur).
+- **API** : un bloc apparaît dans `layout` avec son `blockType`, par exemple `{"blockType": "live-hero", "live": 12, "badge": "…"}`.
+
+**Bloc par défaut « Section »** : `payload_cms` ajoute au layout des Pages un bloc `section`, disponible quel que soit le module :
+
+```ts
+type SectionBlock = {
+  blockType: 'section'
+  title: LocalizedString        // obligatoire
+  subtitle?: LocalizedString    // facultatif
+  description: LocalizedString  // obligatoire
+}
+```
+
+`SectionBlock` sert aussi de base aux blocs d'un module : `class MonBloc(SectionBlock)` reçoit d'abord ces trois champs, puis les siens (`from odoo.addons.payload_cms.payload import SectionBlock`).
+
+**Seeders (contenu de démarrage)** : ils sont séparés des modèles, dans un dossier `seeders/` du module (importé par son `__init__.py`).
+
+```python
+# mon_module/seeders/home_page.py
+from odoo.addons.payload_cms.payload import Seeder
+
+class HomePage(Seeder):
+    _name = 'home_page'
+    _description = "Page d'accueil"
+
+    def run(self, env):
+        if self.exists(env, 'pages', {'slug': {'equals': 'home'}}):
+            return
+        self.create(env, 'pages', {'title': 'Accueil', 'slug': 'home', 'layout': [...]})
+```
+
+- **Exécution** : chaque seeder s'exécute **une seule fois par base**, après la synchronisation des collections et des blocs. L'exécution est mémorisée dans le paramètre système `payload_cms.seeder.<module>.<nom>`. Pour relancer : `env['cms.collection']._payload_run_seeders(force=True, names=['mon_module.home_page'])`.
+- **Uniquement créer ou mettre à jour** : pendant un seeder, toute suppression de document, version, collection ou champ du CMS lève une erreur, et le seeder est annulé entièrement. Un seeder ne peut donc ni vider ni casser la base.
+- **Robustesse** : un seeder en erreur est journalisé sans bloquer le démarrage d'Odoo.
+- **Utilitaires** : `exists(env, slug, where)`, `create(env, slug, data, publish=True)`, `upsert(env, slug, where, data)` (met à jour ou crée) et `update_global(env, slug, data)`.
+
 **Types de champs** :
 
 | Odoo-like | Champ Payload |
@@ -326,7 +593,17 @@ class Settings(Global):
 **Paramètres** :
 - valeur et validation : `string` (1er argument, comme Odoo), `required`, `default`, `help`, `translate=True` (une valeur par langue), `readonly`, `unique`, `placeholder`, `private`, `min`, `max` ;
 - affichage conditionnel : `condition={'field': 'kind', 'equals': 'expo'}` ;
-- mise en page : `tab="…"` (onglet), `row="…"` (côte à côte), `width="50%"`, `sidebar=True`, `hidden=True`.
+- mise en page : `tab="…"` (onglet), `row="…"` (côte à côte), `width="50%"`, `sidebar=True`, `hidden=True` ;
+- badges colorés dans les vues liste et kanban (comme le widget `badge` d'Odoo) :
+
+  ```python
+  active = fields.Boolean("Actif", badge=("Actif", "Inactif"))                    # vert / rouge
+  hidden = fields.Boolean("Masqué", badge={True: ("Masqué", "muted"), False: ("Visible", "success")})
+  status = fields.Selection([('new', 'Nouveau', 'info'), ('done', 'Traité', 'success')], "Statut")  # 3e élément = couleur
+  kind = fields.Selection(KINDS, "Type", badge=True)                               # couleurs attribuées tour à tour
+  ```
+
+  Couleurs : `success` (vert), `danger` (rouge), `warning` (orange), `info` (bleu), `primary` (violet), `muted` (gris), ou une couleur CSS (`"#0ea5e9"`). Sans code : liste **Badges** des champs checkbox, select et radio dans Configuration → Collections.
 
 **Options de collection** :
 - `_group` : groupe de navigation. Par défaut « Collections », à la suite de Pages, Posts, Media et Users.
@@ -338,6 +615,76 @@ class Settings(Global):
 - `_hidden` : collection masquée dans la navigation.
 
 **Synchronisation** : les classes des modules installés sont appliquées automatiquement à l'installation, à la mise à jour et au démarrage d'Odoo, uniquement si leur définition a changé (empreinte stockée dans `cms.collection.code_hash`). Le code fait foi : dans Configuration → Collections, les champs d'une collection définie en code sont en lecture seule (« Defined in module »).
+
+## Étendre l'admin OdooPayload depuis un module (vues, widgets, champs)
+
+Un module qui dépend de `payload_cms` peut ajouter ses propres écrans à l'admin, qui s'affichent avec l'interface OdooPayload (thème clair / sombre compris). Les vues XML Odoo (`ir.ui.view`) restent, elles, affichées par le client web Odoo natif.
+
+| Besoin | Ce qu'on écrit | Rendu |
+|---|---|---|
+| Contenu géré par des éditeurs | une classe `Collection` (Python) | liste, édition, kanban… générés automatiquement |
+| Écran sur mesure dans l'admin (statistiques, tableau de bord…) | `registerView(...)` (JS, OWL) | page `/admin/x/<chemin>`, dans la navigation |
+| Encart sur le tableau de bord | `registerDashboardWidget(...)` | au-dessus des collections |
+| Saisie spéciale pour un champ (couleur, carte…) | `registerField(...)` + `component="..."` sur le champ | remplace la saisie par défaut |
+| Données métier Odoo | modèle Odoo + vues XML | interface native Odoo |
+
+**1. Déclarer les fichiers** dans le manifest du module (ils rejoignent le bundle de l'admin) :
+
+```python
+'assets': {
+    'payload_cms.assets_admin': [
+        'mon_module/static/src/payload/**/*',     # .js, .xml (templates OWL), .css
+    ],
+},
+```
+
+**2. Enregistrer les écrans** (`mon_module/static/src/payload/stats.js`) :
+
+```javascript
+/** @odoo-module **/
+import { Component, onWillStart, useState } from "@odoo/owl";
+import { callKw, registerDashboardWidget, registerField, registerView } from "@payload_cms/admin/core/extensions";
+import { setStepNav } from "@payload_cms/admin/core/store";
+
+class StatsView extends Component {
+    static template = "mon_module.StatsView";        // défini dans un .xml du même dossier
+    setup() {
+        this.state = useState({ lives: 0 });
+        onWillStart(async () => {
+            setStepNav([{ label: "Statistiques" }]);   // fil d'Ariane (sinon : le libellé de la vue)
+            this.state.lives = await callKw("events", "search_count", [[["active", "=", true]]]);
+        });
+    }
+}
+
+registerView({ path: "statistiques", label: "Statistiques", group: "Mon site", component: StatsView });
+registerDashboardWidget({ key: "prochain-live", component: NextLiveWidget, width: "half" });
+```
+
+- `registerView({path, label, component, group, sequence, adminOnly, nav, title})` : la vue répond sur `/admin/x/<path>` et sur ses sous-chemins (`props.route.params.subpath`, `props.route.query`). Elle apparaît dans la navigation et sur le tableau de bord (groupe `group`), sauf avec `nav: false`. `adminOnly: true` la réserve aux administrateurs du CMS.
+- `registerDashboardWidget({key, component, width, sequence, adminOnly})` : `width` vaut `"full"`, `"half"` ou `"third"`.
+- `registerField(name, Component)` : le composant (qui étend `FieldBase` de `@payload_cms/admin/fields/field_base` : `this.value`, `this.setValue(v)`, `this.field`, `this.readOnly`) remplace la saisie des champs déclarés avec `component="<name>"` :
+
+  ```python
+  couleur = fields.Char("Couleur", component="color")
+  ```
+
+- `callKw(model, method, args, kwargs)` appelle l'API « à la Odoo » (`search_read`, `web_search_read`, `create`, méthodes `@expose`…), comme `orm.call` dans Odoo.
+- Les autres modules de l'admin sont importables : `@payload_cms/admin/core/store` (`setStepNav`, `toast`, `store`), `@payload_cms/admin/components/base` (`Button`, `Pill`, `Select`…), `@payload_cms/admin/core/utils` (`icon`).
+- Pour que le rendu suive le thème clair / sombre, utilisez les classes de Payload (`gutter`, `card`, `table`, `field-description`…) et ses variables CSS (`var(--theme-text)`, `var(--theme-elevation-500)`…).
+
+**3. Ouvrir l'écran depuis un menu Odoo** :
+
+```xml
+<record id="action_stats" model="ir.actions.client">
+    <field name="name">Statistiques</field>
+    <field name="tag">payload_cms.admin</field>
+    <field name="params" eval="{'path': '/x/statistiques'}"/>
+</record>
+<menuitem id="menu_stats" name="Statistiques" parent="menu_root" action="action_stats"/>
+```
+
+Exemple complet : `techlives_series/static/src/payload/` (vue « Statistiques » et widget « Prochain live ») et son menu dans `techlives_series/views/menus.xml`.
 
 ## Crédits
 

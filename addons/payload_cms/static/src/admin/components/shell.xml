@@ -38,6 +38,11 @@
                     </t>
                     <div class="nav__controls">
                         <a t-if="!embedded" class="nav__odoo-link" href="/odoo" data-external="1" title="Back to Odoo">← Odoo</a>
+                        <button type="button" class="nav__theme-toggle" t-on-click="toggleTheme"
+                                t-att-title="theme.current === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+                                t-att-aria-label="theme.current === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'">
+                            <t t-out="icon(theme.current === 'dark' ? 'theme-light' : 'theme-dark')"/>
+                        </button>
                         <a aria-label="Log out" class="nav__log-out" href="/admin/logout" tabindex="0" title="Log out">
                             <t t-out="icon('logout')"/>
                         </a>
@@ -164,7 +169,7 @@
 
     <t t-name="payload.Toaster">
         <section aria-label="Notifications alt+T" tabindex="-1" aria-live="polite" aria-relevant="additions text" aria-atomic="false">
-            <ol t-if="store.toasts.length" dir="ltr" tabindex="-1" class="payload-toast-container" data-sonner-toaster="true" data-theme="light"
+            <ol t-if="store.toasts.length" dir="ltr" tabindex="-1" class="payload-toast-container" data-sonner-toaster="true" t-att-data-theme="theme.current"
                 data-y-position="bottom" data-x-position="right" t-att-data-lifted="state.expanded and store.toasts.length > 1 ? 'true' : 'false'"
                 style="--front-toast-height: 52px; --width: 356px; --gap: 8px; --offset-top: calc(var(--gutter-h) / 2); --offset-right: calc(var(--gutter-h) / 2); --offset-bottom: calc(var(--gutter-h) / 2); --offset-left: calc(var(--gutter-h) / 2); --mobile-offset-top: 16px; --mobile-offset-right: 16px; --mobile-offset-bottom: 16px; --mobile-offset-left: 16px;"
                 t-on-mouseenter="() => state.expanded = true" t-on-mouseleave="() => state.expanded = false">

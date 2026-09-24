@@ -47,6 +47,7 @@
                             <field name="write_date" readonly="1" string="Updated"/>
                             <field name="filename" readonly="1" invisible="not filename"/>
                             <field name="filesize" readonly="1" invisible="not filename"/>
+                            <field name="storage" readonly="1" invisible="not filename"/>
                         </group>
                     </group>
                 </sheet>

@@ -6,6 +6,11 @@
             <div>
                 <div>
                     <div class="modular-dashboard" style="display: flex; flex-wrap: wrap">
+                        <div t-foreach="widgets" t-as="widget" t-key="widget.key" class="widget" t-att-data-slug="widget.key" t-att-data-width="widget.width" t-att-style="widgetStyle(widget)">
+                            <div class="widget-wrapper"><div class="widget-content">
+                                <t t-component="widget.component"/>
+                            </div></div>
+                        </div>
                         <div class="widget" data-slug="collections-0" data-width="full" style="width: 100%; padding: 6px; opacity: 1; position: relative">
                             <div class="draggable" id="collections-0" style="width: 100%; height: 100%">
                                 <div class="widget-wrapper">

@@ -2,7 +2,7 @@
 <templates xml:space="preserve">
     <t t-name="payload_cms.PayloadAdminAction">
         <div class="o_action o_payload_admin_action">
-            <iframe t-ref="frame" class="o_payload_admin_frame" t-att-src="src" title="Payload CMS"/>
+            <iframe t-ref="frame" t-att-class="'o_payload_admin_frame' + (dark ? ' o_payload_admin_frame--dark' : '')" t-att-src="src" title="Payload CMS"/>
         </div>
     </t>
 </templates>

@@ -18,6 +18,11 @@
                 </div>
             </t>
             <t t-elif="type === 'array' or type === 'blocks'"><span t-esc="arrayText"/></t>
+            <t t-elif="badges">
+                <span class="cms-badges"><t t-foreach="badges" t-as="badge" t-key="badge_index">
+                    <span t-att-class="badge.className" t-att-style="badge.style" t-esc="badge.label"/>
+                </t></span>
+            </t>
             <t t-elif="isEmpty">
                 <t t-if="type === 'date'"><span/></t>
                 <t t-elif="type === 'relationship' or type === 'upload'"><div class="relationship-cell" t-esc="noLabel"/></t>

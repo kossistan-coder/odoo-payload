@@ -3,13 +3,26 @@
 
     <!-- Payload-like admin panel (OWL single page application served on /admin) -->
     <template id="admin_page" name="Payload Admin">&lt;!DOCTYPE html&gt;
-        <html lang="en" data-theme="light" dir="ltr">
+        <html lang="en" t-att-data-theme="admin_theme or 'light'" dir="ltr">
             <head>
                 <meta charset="utf-8"/>
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
                 <meta name="robots" content="noindex, nofollow"/>
+                <meta name="color-scheme" content="light dark"/>
+                <!-- Admin theme (see core/theme.js): resolved before the first paint, no flash of the wrong theme -->
+                <script type="text/javascript">
+                    (function () {
+                        var pref = null;
+                        try { pref = localStorage.getItem("payload-theme"); } catch (e) {}
+                        if (!pref) { var m = document.cookie.match(/(?:^|;\s*)payload-theme=([^;]*)/); pref = m &amp;&amp; m[1]; }
+                        var dark = pref === "dark" || (pref !== "light" &amp;&amp; window.matchMedia &amp;&amp; window.matchMedia("(prefers-color-scheme: dark)").matches);
+                        document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+                    })();
+                </script>
                 <title>Payload</title>
-                <link rel="icon" type="image/svg+xml" href="/payload_cms/static/src/admin/img/favicon.svg"/>
+                <link rel="icon" type="image/x-icon" href="/payload_cms/static/src/admin/img/favicon.ico" sizes="16x16 32x32 48x48"/>
+                <link rel="icon" type="image/png" href="/payload_cms/static/src/admin/img/favicon.png" sizes="64x64"/>
+                <link rel="apple-touch-icon" href="/payload_cms/static/src/admin/img/apple-touch-icon.png"/>
                 <link rel="preconnect" href="https://fonts.googleapis.com"/>
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
                 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&amp;family=Roboto+Mono:ital,wght@0,100..700;1,100..700&amp;display=swap"/>

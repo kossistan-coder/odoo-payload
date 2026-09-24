@@ -5,6 +5,7 @@ Implements the routes documented at https://payloadcms.com/docs/rest-api/overvie
 on top of Odoo: collections, globals, versions, uploads and auth.
 """
 import datetime
+import hashlib
 import json
 import logging
 import re
@@ -13,11 +14,11 @@ from werkzeug.exceptions import NotFound
 
 from odoo import SUPERUSER_ID, http
 from odoo.exceptions import AccessDenied, AccessError, UserError
-from odoo.http import request
+from odoo.http import Stream, request
 from odoo.tools import SQL
 
 from ..models.cms_document import PayloadValidationError, _iso
-from ..tools import api_docs, import_export, localization, multitenancy, schema, schema_admin, translate
+from ..tools import api_docs, import_export, localization, multitenancy, schema, schema_admin, storage, translate
 from ..tools.query import QueryError, parse_bracket_params
 from .utils import cors_headers, decode_jwt, encode_jwt, error_response, json_response
 
@@ -349,9 +350,14 @@ class PayloadApi(http.Controller):
             return self._access(req)
         if head == 'users':
             return self._users(req, method, seg[1:])
+        rest = seg[1:]
+        # /api is the internal API of the admin: the public API of a site is written
+        # by its module (routes / JSON-RPC, see payload_cms.payload.Model). Only the
+        # files of the upload collections stay public (images of the site).
+        if not req.is_editor and not (len(rest) == 2 and rest[0] == 'file' and method in ('GET', 'HEAD')):
+            raise Forbidden() if req.user else Unauthorized()
         if head == 'globals' and len(seg) >= 2:
             return self._global(req, method, seg[1], seg[2:])
-        rest = seg[1:]
         public_create = not rest and method == 'POST' and not request.httprequest.headers.get('X-Payload-HTTP-Method-Override')
         collection = req.collection(head, action='create' if public_create else 'read')
         if not rest:
@@ -739,15 +745,31 @@ class PayloadApi(http.Controller):
         doc = env['cms.document'].sudo().browse(row[0])
         if not req.is_editor and collection.drafts and not doc.published_data:
             raise NotFound()
-        if doc.filename == filename:
-            attachment = doc.attachment_id
-        else:
-            size = next(s for s in (doc.sizes or {}).values() if s.get('filename') == filename)
-            attachment = env['ir.attachment'].sudo().browse(size['attachment_id'])
-        if not attachment.exists():
+        size = None if doc.filename == filename else \
+            next(s for s in (doc.sizes or {}).values() if s.get('filename') == filename)
+        key = doc._file_key(size)
+        if not key:
             raise NotFound()
-        stream = env['ir.binary']._get_stream_from(attachment.sudo())
-        stream.download_name = filename
+        if doc.storage == 's3':
+            public_url = doc._public_file_url(key)
+            if public_url:
+                stream = Stream(type='url', url=public_url, max_age=3600)
+            else:
+                try:
+                    content = doc._storage_backend().get(key)
+                except storage.StorageError as e:
+                    _logger.warning("Payload CMS: %s", e)
+                    raise NotFound()
+                # object keys are never reused: the key identifies the content
+                stream = Stream(type='data', data=content, size=len(content), download_name=filename,
+                                mimetype=(size or {}).get('mimeType') if size else doc.mime_type,
+                                etag=hashlib.sha1(key.encode()).hexdigest(), last_modified=doc.write_date, max_age=3600)
+        else:
+            attachment = env['ir.attachment'].sudo().browse(int(key)).exists()
+            if not attachment:
+                raise NotFound()
+            stream = env['ir.binary']._get_stream_from(attachment)
+            stream.download_name = filename
         response = stream.get_response(max_age=3600, content_security_policy="default-src 'none'")
         for header, value in cors_headers():
             response.headers[header] = value
@@ -1026,8 +1048,12 @@ class PayloadApi(http.Controller):
             return self._multitenancy_settings(req, method)
         if section == 'api-docs':
             return self._api_docs_settings(req, method)
+        if section == 'storage':
+            return self._storage_settings(req, method)
         if section == 'fields' and method == 'GET':
             return json_response(self._paginate(req, schema_admin.field_list(env), ['name', 'label', 'type', 'collection', 'path']))
+        if section == 'blocks':
+            return self._schema_blocks(req, method, rest)
         if section not in ('collections', 'globals'):
             raise NotFound()
         kind = 'global' if section == 'globals' else 'collection'
@@ -1067,6 +1093,47 @@ class PayloadApi(http.Controller):
             request.env.cr.rollback()
             raise PayloadValidationError([{'path': 'fields', 'message': str(e.args[0] if e.args else e)}], section,
                                          message=str(e.args[0] if e.args else e))
+        raise NotFound()
+
+    def _schema_blocks(self, req, method, rest):
+        """Reusable blocks (Configuration → Blocks), virtual collection `_config_blocks`."""
+        from odoo.exceptions import UserError, ValidationError
+        env = request.env
+        Block = env['cms.block'].sudo().with_context(active_test=False)
+        try:
+            if len(rest) == 1:
+                if method == 'GET':
+                    docs = [schema_admin.block_doc(b) for b in Block.search([])]
+                    return json_response(self._paginate(req, docs, ['label', 'slug']))
+                if method == 'POST':
+                    data, _u = req.body()
+                    record = schema_admin.save_block(env, Block.browse(), data)
+                    return json_response({'doc': schema_admin.block_doc(record), 'message': 'Block successfully created.'}, 201)
+                if method == 'DELETE':
+                    where = req.query.get('where') or {}
+                    ids = str(((where.get('id') or {}).get('in')) or '').split(',') if isinstance(where, dict) else []
+                    records = Block.browse([int(i) for i in ids if i.isdigit()]).exists()
+                    count = len(records)
+                    records.unlink()
+                    return json_response({'docs': [], 'errors': [], 'message': 'Deleted %s blocks successfully.' % count})
+            elif rest[1].isdigit():
+                record = Block.browse(int(rest[1])).exists()
+                if not record:
+                    raise NotFound()
+                if method == 'GET':
+                    return json_response(schema_admin.block_doc(record))
+                if method in ('PATCH', 'PUT', 'POST'):
+                    data, _u = req.body()
+                    schema_admin.save_block(env, record, data)
+                    return json_response({'doc': schema_admin.block_doc(record), 'message': 'Updated successfully.'})
+                if method == 'DELETE':
+                    doc = schema_admin.block_doc(record)
+                    record.unlink()
+                    return json_response({'doc': doc, 'message': 'Block "%s" successfully deleted.' % doc['label']})
+        except (UserError, ValidationError) as e:
+            request.env.cr.rollback()
+            message = str(e.args[0] if e.args else e)
+            raise PayloadValidationError([{'path': 'components', 'message': message}], 'blocks', message=message)
         raise NotFound()
 
     def _multitenancy_settings(self, req, method):
@@ -1111,7 +1178,7 @@ class PayloadApi(http.Controller):
         settings = api_docs.get_settings(env)
         if method in ('POST', 'PATCH'):
             data, _u = req.body()
-            for key in ('enabled', 'public', 'includeAuth'):
+            for key in ('enabled', 'public', 'includeAuth', 'includeRpc'):
                 if key in data:
                     settings[key] = bool(data[key])
             for key in ('title', 'version', 'description'):
@@ -1120,8 +1187,8 @@ class PayloadApi(http.Controller):
             if isinstance(data.get('servers'), list):
                 settings['servers'] = [{'url': s['url'].strip(), 'description': (s.get('description') or '').strip()}
                                        for s in data['servers'] if isinstance(s, dict) and (s.get('url') or '').strip()]
-            if isinstance(data.get('collections'), list):
-                settings['collections'] = [c for c in data['collections'] if isinstance(c, str)]
+            if isinstance(data.get('modules'), list):
+                settings['modules'] = [m for m in data['modules'] if isinstance(m, str)]
             api_docs.set_settings(env, settings)
         doc = dict(settings, servers=[dict(s, id='server-%s' % i) for i, s in enumerate(settings.get('servers') or [])],
                    docsUrl=request.httprequest.host_url.rstrip('/') + '/api-docs',
@@ -1129,6 +1196,58 @@ class PayloadApi(http.Controller):
                    globalType='_config_api_docs')
         if method in ('POST', 'PATCH'):
             return json_response({'result': doc, 'message': 'Updated successfully.'})
+        return json_response(doc)
+
+    def _storage_settings(self, req, method):
+        """Settings of the virtual global `_config_storage` (file storage of the uploads)."""
+        env = request.env
+        stored = storage.stored_settings(env)
+        locked = storage.env_overrides()
+        message = 'Updated successfully.'
+        if method in ('POST', 'PATCH'):
+            data, _u = req.body()
+            for key in ('backend', 'endpoint', 'region', 'bucket', 'accessKey', 'prefix', 'addressing', 'publicUrl', 'delivery'):
+                if key in data and key not in locked:
+                    stored[key] = (data[key] or '').strip() if isinstance(data[key], str) else data[key]
+            if data.get('secretKey') and 'secretKey' not in locked:
+                stored['secretKey'] = data['secretKey'].strip()
+            if data.get('clearSecretKey') and 'secretKey' not in locked:
+                stored['secretKey'] = ''
+            settings = storage._normalize(dict(stored, **locked))
+            if settings['backend'] == 's3' and settings['delivery'] == 'public' and not settings['publicUrl']:
+                raise PayloadValidationError([{'path': 'publicUrl', 'label': 'Public base URL',
+                                               'message': 'Required to serve the files from the bucket.'}], '_config_storage')
+            if settings['backend'] == 's3' or data.get('testConnection'):
+                try:
+                    message = storage.S3Backend(settings).test(create_bucket=bool(data.get('createBucket')))
+                except storage.StorageError as e:
+                    raise PayloadValidationError([{'path': 'bucket', 'label': 'Bucket', 'message': str(e)}],
+                                                 '_config_storage', message=str(e))
+            storage.set_settings(env, stored)
+            if data.get('migrateExisting'):
+                moved, errors = env['cms.document'].sudo()._payload_migrate_storage(settings['backend'])
+                message = '%s %s file(s) moved to the %s storage.' % (message, moved, settings['backend'])
+                if errors:
+                    message += ' %s error(s): %s' % (len(errors), '; '.join(errors[:3]))
+        settings = storage.get_settings(env)
+        Document = env['cms.document'].sudo()
+        counts = {name: Document.search_count([('collection_id.upload', '=', True), ('filename', '!=', False),
+                                               ('storage', '=', name)]) for name in storage.BACKENDS}
+        doc = {k: v for k, v in settings.items() if k != 'secretKey'}
+        doc.update({
+            'secretKey': '',
+            'secretKeySet': bool(settings.get('secretKey')),
+            'clearSecretKey': False,
+            'testConnection': False,
+            'createBucket': False,
+            'migrateExisting': False,
+            'nativeCount': counts['native'],
+            's3Count': counts['s3'],
+            'envVariables': ', '.join('%s (%s)' % (storage.ENV_VARS[k], k) for k in sorted(locked)) or 'None',
+            'globalType': '_config_storage',
+        })
+        if method in ('POST', 'PATCH'):
+            return json_response({'result': doc, 'message': message})
         return json_response(doc)
 
     @staticmethod
@@ -1224,6 +1343,13 @@ class PayloadApi(http.Controller):
             values += count
         return 'Translated %s value(s) in %s document(s).' % (values, done)
 
+    @staticmethod
+    def _api_modules():
+        from ..payload.apidoc import payload_modules
+        names = payload_modules(request.env)
+        modules = request.env['ir.module.module'].sudo().search([('name', 'in', names)])
+        return [{'value': m.name, 'label': m.shortdesc or m.name} for m in modules]
+
     def _admin(self, req, method, rest):
         req.require_editor()
         if rest[:1] == ['schema']:
@@ -1240,9 +1366,14 @@ class PayloadApi(http.Controller):
                 'localization': localization.public_settings(req.localization),
                 'multitenancy': {'enabled': bool(req.multitenancy.get('enabled')), 'header': multitenancy.HEADER,
                                  'userTenants': req.user.payload_tenant_ids.ids if not req.is_admin else None},
-                'apiDocs': {'enabled': bool(api_docs.get_settings(request.env).get('enabled')), 'url': '/api-docs'},
+                'storage': storage.public_settings(storage.get_settings(request.env)) if req.is_admin else None,
+                'apiDocs': {'enabled': bool(api_docs.get_settings(request.env).get('enabled')), 'url': '/api-docs',
+                            'modules': self._api_modules()},
                 'odooURL': '/odoo',
             })
+        if rest == ['routes'] and method == 'GET':
+            # documented API routes (API tab of the edit view)
+            return json_response({'routes': api_docs.admin_routes(request.env, req.query.get('model') or None)})
         if rest[:1] == ['relation-labels'] and method == 'GET':
             # {collection: [ids]} -> titles, used by relationship fields & list cells
             spec = req.query.get('ids') or {}
