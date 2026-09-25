@@ -22,6 +22,7 @@ from .collection import Block
 
 class SectionBlock(Block):
     """Title (required), subtitle, description (required), all translatable."""
-    title = fields.Char("Title", required=True, translate=True)
-    subtitle = fields.Char("Subtitle", translate=True)
-    description = fields.Text("Description", required=True, translate=True)
+    _localized = True
+    title = fields.Char("Title", required=True, translate=True, localized=True)
+    subtitle = fields.Char("Subtitle", translate=True, localized=True)
+    description = fields.Text("Description", required=True, translate=True, localized=True)

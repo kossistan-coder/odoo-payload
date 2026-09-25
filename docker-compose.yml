@@ -51,6 +51,9 @@ services:
       - PAYLOAD_S3_ADDRESSING=${PAYLOAD_S3_ADDRESSING:-}
       - PAYLOAD_S3_PUBLIC_URL=${PAYLOAD_S3_PUBLIC_URL:-}
       - PAYLOAD_S3_DELIVERY=${PAYLOAD_S3_DELIVERY:-}
+      # Environnement et seeders Payload CMS (seeders désactivés par défaut : 0)
+      - PAYLOAD_ENV=${PAYLOAD_ENV:-development}
+      - PAYLOAD_RUN_SEEDERS=${PAYLOAD_RUN_SEEDERS:-0}
     volumes:
       - odoo_data:/var/lib/odoo
       - ./config/odoo.conf:/etc/odoo/odoo.conf:ro

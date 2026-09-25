@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Action client pour intégrer l'interface d'administration Payload CMS -->
+    <record id="action_portfolio_hub_admin" model="ir.actions.client">
+        <field name="name">Portfolio Hub</field>
+        <field name="tag">payload_cms.admin</field>
+    </record>
+
+    <!-- Menu Racine dans l'App Drawer (menu burger / app switcher) -->
+    <menuitem id="portfolio_hub_menu_root"
+              name="Portfolio Hub"
+              action="action_portfolio_hub_admin"
+              web_icon="portfolio_hub,static/description/icon.png"
+              sequence="10"/>
+
+    <!-- Tableau de bord Payload CMS -->
+    <menuitem id="portfolio_hub_menu_dashboard"
+              name="Tableau de bord CMS"
+              parent="portfolio_hub_menu_root"
+              action="action_portfolio_hub_admin"
+              sequence="1"/>
+
+    <!-- Produits Odoo (Formations & Services vendables) -->
+    <menuitem id="portfolio_hub_menu_products"
+              name="Produits &amp; Offres Odoo"
+              parent="portfolio_hub_menu_root"
+              action="product.product_template_action"
+              sequence="20"/>
+
+    <!-- Menu Configuration (liens vers les outils Payload CMS) -->
+    <menuitem id="portfolio_hub_menu_config"
+              name="Configuration CMS"
+              parent="portfolio_hub_menu_root"
+              sequence="90"
+              groups="payload_cms.group_payload_cms_admin"/>
+
+    <menuitem id="portfolio_hub_menu_config_collections"
+              name="Collections"
+              parent="portfolio_hub_menu_config"
+              action="payload_cms.action_payload_config_collections"
+              sequence="10"/>
+
+    <menuitem id="portfolio_hub_menu_config_globals"
+              name="Globals"
+              parent="portfolio_hub_menu_config"
+              action="payload_cms.action_payload_config_globals"
+              sequence="20"/>
+
+    <menuitem id="portfolio_hub_menu_config_blocks"
+              name="Blocks"
+              parent="portfolio_hub_menu_config"
+              action="payload_cms.action_payload_config_blocks"
+              sequence="30"/>
+
+    <menuitem id="portfolio_hub_menu_config_fields"
+              name="Fields"
+              parent="portfolio_hub_menu_config"
+              action="payload_cms.action_payload_config_fields"
+              sequence="40"/>
+
+    <menuitem id="portfolio_hub_menu_config_storage"
+              name="Storage S3/MinIO"
+              parent="portfolio_hub_menu_config"
+              action="payload_cms.action_payload_config_storage"
+              sequence="50"/>
+
+    <menuitem id="portfolio_hub_menu_config_api_docs"
+              name="API Docs (Swagger)"
+              parent="portfolio_hub_menu_config"
+              action="payload_cms.action_payload_config_api_docs"
+              sequence="60"/>
+</odoo>

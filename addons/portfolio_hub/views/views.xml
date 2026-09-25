@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Extension de la vue formulaire de product.template pour lier le CMS -->
+        <record id="product_template_form_view_portfolio" model="ir.ui.view">
+            <field name="name">product.template.form.portfolio</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="product.product_template_only_form_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//notebook" position="inside">
+                    <page string="Payload CMS" name="payload_cms">
+                        <group>
+                            <group string="Contenus CMS associés">
+                                <field name="formation_document_id" options="{'no_create': True}"/>
+                                <field name="service_document_id" options="{'no_create': True}"/>
+                            </group>
+                        </group>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

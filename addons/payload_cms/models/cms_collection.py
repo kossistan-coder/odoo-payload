@@ -403,8 +403,26 @@ class CmsCollection(models.Model):
     @api.model
     def _payload_run_seeders(self, force=False, names=None, installed=None):
         """Run the seeders of the installed modules that never ran (``force``:
-        run them again; ``names``: only these ``module.name``)."""
+        run them again; ``names``: only these ``module.name``).
+
+        Sécurité et environnement :
+        Les seeders ne s'exécutent qu'en environnement de développement (PAYLOAD_ENV='development')
+        et uniquement lorsque la variable d'environnement PAYLOAD_RUN_SEEDERS=1 ou via commande explicite.
+        """
+        import os
         from ..payload import registered_seeders
+
+        env_mode = os.environ.get('PAYLOAD_ENV', 'development').lower()
+        run_allowed = os.environ.get('PAYLOAD_RUN_SEEDERS', '0').lower() in ('1', 'true', 'yes')
+
+        if env_mode not in ('dev', 'development'):
+            _logger.info("Payload CMS: seeders ignored in '%s' environment (PAYLOAD_ENV must be 'development')", env_mode)
+            return []
+
+        if not run_allowed and not force:
+            _logger.info("Payload CMS: seeders skipped (requires PAYLOAD_RUN_SEEDERS=1 or dedicated seed command)")
+            return []
+
         Param = self.env['ir.config_parameter'].sudo()
         if installed is None:
             installed = set(self.env['ir.module.module'].sudo().search(

@@ -67,7 +67,7 @@ FORM_BUILDER_SCHEMA = [
         'versions': {'maxPerDoc': 20},
         'publicRead': True,
         'fields': [
-            {'name': 'title', 'type': 'text', 'label': 'Title', 'required': True},
+            {'name': 'title', 'type': 'text', 'label': 'Title', 'required': True, 'localized': True},
             {'name': 'fields', 'type': 'blocks', 'label': 'Fields', 'blocks': FORM_BLOCKS},
             {'name': 'submitButtonLabel', 'type': 'text', 'label': 'Submit Button Label', 'localized': True},
             {'name': 'confirmationType', 'type': 'radio', 'label': 'Confirmation Type', 'defaultValue': 'message',

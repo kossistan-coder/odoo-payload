@@ -42,6 +42,10 @@ def _fields_of(cls):
         for name, value in vars(klass).items():
             if isinstance(value, Field):
                 items[name] = value
+    if getattr(cls, '_localized', False) or getattr(cls, 'localized', False):
+        for name, field in items.items():
+            if name != 'slug' and getattr(field, 'type', None) != 'slug':
+                field.localized = True
     return sorted(items.items(), key=lambda item: item[1]._order)
 
 
@@ -108,6 +112,7 @@ class _Base:
     _live_preview_url = None   # e.g. 'https://www.site.com/{slug}?locale={locale}'
     _preview_url = None
     _multi_tenant = False      # multisite: scoped per site
+    _localized = False         # all fields (except slug) localized
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)

@@ -8,6 +8,7 @@ from ..payload import SectionBlock
 
 class Section(SectionBlock):
     _name = 'section'
+    _localized = True
     _label = 'Section'
     _inherit = 'pages.layout'
     _sequence = 1

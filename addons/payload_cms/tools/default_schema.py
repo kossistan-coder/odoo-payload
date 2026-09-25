@@ -7,10 +7,10 @@ The structure is the same as a Payload config (``CollectionConfig`` /
 
 LINK_FIELDS = [
     {'type': 'row', 'fields': [
-        {'name': 'label', 'type': 'text', 'required': True, 'admin': {'width': '50%'}},
-        {'name': 'url', 'type': 'text', 'label': 'URL', 'required': True, 'admin': {'width': '50%'}},
+        {'name': 'label', 'type': 'text', 'required': True, 'localized': True, 'admin': {'width': '50%'}},
+        {'name': 'url', 'type': 'text', 'label': 'URL', 'required': True, 'localized': True, 'admin': {'width': '50%'}},
     ]},
-    {'name': 'newTab', 'type': 'checkbox', 'label': 'Open in new tab'},
+    {'name': 'newTab', 'type': 'checkbox', 'label': 'Open in new tab', 'localized': True},
 ]
 
 DEFAULT_SCHEMA = [
@@ -29,8 +29,8 @@ DEFAULT_SCHEMA = [
                        {'name': 'og', 'width': 1200, 'height': 630},
                    ]},
         'fields': [
-            {'name': 'alt', 'type': 'text', 'label': 'Alt'},
-            {'name': 'caption', 'type': 'richText'},
+            {'name': 'alt', 'type': 'text', 'label': 'Alt', 'localized': True},
+            {'name': 'caption', 'type': 'richText', 'localized': True},
         ],
     },
     {
@@ -44,33 +44,33 @@ DEFAULT_SCHEMA = [
         },
         'versions': {'drafts': {'autosave': True}},
         'fields': [
-            {'name': 'title', 'type': 'text', 'required': True},
+            {'name': 'title', 'type': 'text', 'required': True, 'localized': True},
             {'type': 'tabs', 'tabs': [
                 {'label': 'Content', 'fields': [
                     {'name': 'layout', 'type': 'blocks', 'required': True, 'blocks': [
                         {'slug': 'content', 'labels': {'singular': 'Content'}, 'fields': [
-                            {'name': 'richText', 'type': 'richText', 'label': 'Rich Text'},
+                            {'name': 'richText', 'type': 'richText', 'label': 'Rich Text', 'localized': True},
                         ]},
                         {'slug': 'mediaBlock', 'labels': {'singular': 'Media Block'}, 'fields': [
-                            {'name': 'media', 'type': 'upload', 'relationTo': 'media', 'required': True},
+                            {'name': 'media', 'type': 'upload', 'relationTo': 'media', 'required': True, 'localized': True},
                         ]},
                         {'slug': 'cta', 'labels': {'singular': 'Call to Action'}, 'fields': [
-                            {'name': 'richText', 'type': 'richText', 'label': 'Rich Text'},
-                            {'name': 'links', 'type': 'array', 'maxRows': 2, 'fields': LINK_FIELDS},
+                            {'name': 'richText', 'type': 'richText', 'label': 'Rich Text', 'localized': True},
+                            {'name': 'links', 'type': 'array', 'maxRows': 2, 'fields': LINK_FIELDS, 'localized': True},
                         ]},
                         {'slug': 'archive', 'labels': {'singular': 'Archive'}, 'fields': [
-                            {'name': 'introContent', 'type': 'richText', 'label': 'Intro Content'},
-                            {'name': 'limit', 'type': 'number', 'defaultValue': 10},
+                            {'name': 'introContent', 'type': 'richText', 'label': 'Intro Content', 'localized': True},
+                            {'name': 'limit', 'type': 'number', 'defaultValue': 10, 'localized': True},
                         ]},
                     ]},
                 ]},
                 {'name': 'meta', 'label': 'SEO', 'fields': [
-                    {'name': 'title', 'type': 'text'},
-                    {'name': 'image', 'type': 'upload', 'relationTo': 'media'},
-                    {'name': 'description', 'type': 'textarea'},
+                    {'name': 'title', 'type': 'text', 'localized': True},
+                    {'name': 'image', 'type': 'upload', 'relationTo': 'media', 'localized': True},
+                    {'name': 'description', 'type': 'textarea', 'localized': True},
                 ]},
             ]},
-            {'name': 'publishedAt', 'type': 'date', 'label': 'Published At', 'admin': {'position': 'sidebar'}},
+            {'name': 'publishedAt', 'type': 'date', 'label': 'Published At', 'localized': True, 'admin': {'position': 'sidebar'}},
             {'name': 'slug', 'type': 'slug', 'useAsSlug': 'title', 'admin': {'position': 'sidebar'}},
         ],
     },
@@ -85,23 +85,23 @@ DEFAULT_SCHEMA = [
         },
         'versions': {'drafts': {'autosave': True}},
         'fields': [
-            {'name': 'title', 'type': 'text', 'required': True},
+            {'name': 'title', 'type': 'text', 'required': True, 'localized': True},
             {'type': 'tabs', 'tabs': [
                 {'label': 'Content', 'fields': [
-                    {'name': 'heroImage', 'type': 'upload', 'relationTo': 'media'},
-                    {'name': 'content', 'type': 'richText', 'required': True},
+                    {'name': 'heroImage', 'type': 'upload', 'relationTo': 'media', 'localized': True},
+                    {'name': 'content', 'type': 'richText', 'required': True, 'localized': True},
                 ]},
                 {'label': 'Meta', 'fields': [
                     {'name': 'relatedPosts', 'type': 'relationship', 'relationTo': 'posts', 'hasMany': True,
-                     'admin': {'position': 'sidebar'}},
+                     'localized': True, 'admin': {'position': 'sidebar'}},
                 ]},
                 {'name': 'meta', 'label': 'SEO', 'fields': [
-                    {'name': 'title', 'type': 'text'},
-                    {'name': 'image', 'type': 'upload', 'relationTo': 'media'},
-                    {'name': 'description', 'type': 'textarea'},
+                    {'name': 'title', 'type': 'text', 'localized': True},
+                    {'name': 'image', 'type': 'upload', 'relationTo': 'media', 'localized': True},
+                    {'name': 'description', 'type': 'textarea', 'localized': True},
                 ]},
             ]},
-            {'name': 'publishedAt', 'type': 'date', 'label': 'Published At', 'admin': {'position': 'sidebar'}},
+            {'name': 'publishedAt', 'type': 'date', 'label': 'Published At', 'localized': True, 'admin': {'position': 'sidebar'}},
             {'name': 'slug', 'type': 'slug', 'useAsSlug': 'title', 'admin': {'position': 'sidebar'}},
         ],
     },
@@ -111,7 +111,7 @@ DEFAULT_SCHEMA = [
         'label': 'Header',
         'sequence': 10,
         'fields': [
-            {'name': 'navItems', 'type': 'array', 'label': 'Nav Items', 'maxRows': 6, 'fields': LINK_FIELDS},
+            {'name': 'navItems', 'type': 'array', 'label': 'Nav Items', 'maxRows': 6, 'fields': LINK_FIELDS, 'localized': True},
         ],
     },
     {
@@ -120,8 +120,8 @@ DEFAULT_SCHEMA = [
         'label': 'Footer',
         'sequence': 20,
         'fields': [
-            {'name': 'navItems', 'type': 'array', 'label': 'Nav Items', 'maxRows': 6, 'fields': LINK_FIELDS},
-            {'name': 'copyright', 'type': 'text'},
+            {'name': 'navItems', 'type': 'array', 'label': 'Nav Items', 'maxRows': 6, 'fields': LINK_FIELDS, 'localized': True},
+            {'name': 'copyright', 'type': 'text', 'localized': True},
         ],
     },
 ]
